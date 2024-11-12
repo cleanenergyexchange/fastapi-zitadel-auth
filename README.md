@@ -2,6 +2,11 @@
 
 Python code example for FastAPI using Zitadel + Authorization Code Flow with PKCE and JKWS with caching.
 
+Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-azure-auth).
+
+> [!WARNING]
+> This repo is a work in progress and should not be used in production just yet.
+
 ## Zitadel setup
 
 ### Project
