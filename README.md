@@ -32,31 +32,49 @@ Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-az
 * Note the Client Id (as `OAUTH_CLIENT_ID`)
 
 ### User creation
-* Create a new user in the zitadel instance.
+* Create a new User in the zitadel instance.
 * Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new user
+
+
+### Service User creation
+* Create a new Service User in the zitadel instance and select the Access Token Type to be "JWT".
+* Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new service user
+* Under Keys, create a new key of type "JSON" and note the key ID and download the key (JSON file).
+* You can now use this key's data to authenticate the service user to the API, 
+see the `service_user.py` file.
 
 
 ## FastAPI setup
 
 Copy the `.env.example` file to `.env` and fill in the values above.
 
-### Install with [uv](https://docs.astral.sh/uv/)
+### Run with [uv](https://docs.astral.sh/uv/)
 
-```
-uv install
-uv run python main.py
+```bash
+uv run main.py
 ```
 
 ### Alternatively, use classic venv:
 
-```angular2html
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
 
-Then open http://localhost:8001/docs in a new browser window, click on the "Authorize" button, 
+### Swagger UI
+
+Open http://localhost:8001/docs in a new browser window, click on the "Authorize" button, 
 log in, and then access the `/protected` endpoint in the Swagger UI.
 
+
+### Service User
+
+While the server is running, in another terminal, run the `service_user.py` script to authenticate the service user.
+Make sure to have replaced the json_data key with the data from the service user key JSON file.
+
+```bash
+uv run service_user.py
+```
 

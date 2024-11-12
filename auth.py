@@ -269,12 +269,15 @@ class ZitadelAuthorizationCodeBearer(SecurityBase):
         """
         Validates the token using the provided key and options.
         """
+        # audiences to allow service users also to use the token,
+        # otherwise we'd get "Token contains invalid claims: Audience doesn't match"
+        aud = [self.app_client_id, settings.ZITADEL_PROJECT_ID]
         return dict(
             jwt.decode(
                 access_token,
                 key=key,
                 algorithms=[ALGORITHM],
-                audience=self.app_client_id,
+                audience=aud,
                 issuer=iss,
                 leeway=self.leeway,
                 options=options,
