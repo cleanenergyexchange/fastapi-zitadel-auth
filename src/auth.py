@@ -95,7 +95,7 @@ class ZitadelAuthorizationCodeBearer(SecurityBase):
 
     :param app_client_id: str
             Your application client ID, this is the one you've configured in Zitadel.
-    :param scopes: Optional[dict[str, str]
+    :param scopes: dict[str, str] | None
         Scopes, these are the ones you've configured in Zitadel. Key is scope, value is a description.
         Example:
             {

@@ -41,14 +41,21 @@ oauth2_scheme = ZitadelAuthorizationCodeBearer(
 )
 
 
+@app.get("/api/public", summary="Public endpoint")
+def public():
+    return {"message": "Hello, public world!"}
+
+
 @app.get(
-    "/protected",
-    summary="Zitadel-protected endpoint",
+    "/api/private",
+    summary="Private endpoint, requiring a valid token with `user` scope",
     dependencies=[Security(oauth2_scheme, scopes=["user"])],
 )
 def protected(request: Request):
     logger.debug(f"Claims: {request.state.user.claims}")
-    return {"message": "Hello, protected world!"}
+    return {
+        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.claims['sub']}"
+    }
 
 
 if __name__ == "__main__":

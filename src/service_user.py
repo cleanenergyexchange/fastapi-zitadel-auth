@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import jwt as pyjwt
 from httpx import AsyncClient
@@ -7,27 +8,17 @@ from loguru import logger
 from settings import get_settings
 
 """
-This module demonstrates how to authenticate a service account with Zitadel using the OAuth2 JWT Bearer Token flow.
-
-Be sure to replace the json_data with the actual data from Zitadel.
+This module demonstrates how to authenticate a service account with Zitadel.
 """
 
-# JSON data from Zitadel
-json_data = {
-    "type": "serviceaccount",
-    "keyId": "",
-    "key": "",
-    "expirationDate": "",
-    "userId": "",
-}
+settings = get_settings()
+with open(settings.SERVICE_USER_PRIVATE_KEY_FILE, "r") as file:
+    json_data = json.load(file)
 
 # Extracting necessary values from the JSON data
 private_key = json_data["key"]
 kid = json_data["keyId"]
 user_id = json_data["userId"]
-
-settings = get_settings()
-BACKEND_API_URL = "http://localhost:8001"
 
 # Preparing the JWT header and payload for authentication
 header = {"alg": "RS256", "kid": kid}
@@ -77,7 +68,7 @@ async def main():
 
         # Example API call using the acquired access token
         my_api_response = await client.get(
-            f"{BACKEND_API_URL}/protected",
+            "http://localhost:8001/api/private",
             headers={"Authorization": f"Bearer {access_token}"},
         )
         if my_api_response.status_code == 200:

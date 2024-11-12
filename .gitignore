@@ -1,4 +1,6 @@
 .idea/
+# private key file from Zitadel
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

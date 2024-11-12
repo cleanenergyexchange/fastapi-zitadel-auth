@@ -1,8 +1,14 @@
 # fastapi-zitadel-auth
 
-Python code example for FastAPI using Zitadel + Authorization Code Flow with PKCE and JKWS with caching.
+Python example to protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
 
-Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-azure-auth).
+Details:
+
+* Authorization Code Flow with PKCE
+* JWT signature validation using JWKS obtained from Zitadel
+* Service User authentication using JWT Profiles
+* Swagger UI integration
+* Python 3.12
 
 > [!WARNING]
 > This repo is a work in progress and should not be used in production just yet.
@@ -13,7 +19,7 @@ Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-az
 * Create a new project. 
 * in the General settings, tick "Assert Roles on Authentication" and "Check authorization on Authentication"
 * Note the project ID (also called "resource Id") as `ZITADEL_PROJECT_ID`
-* Under Roles, create a new role with key: "user" and Display Name "user" and assign it to the project
+* Under Roles, create a new role with key: `user` and Display Name "user" and assign it to the project. 
 
 ### App 1: API
 * Create a new application in the project of type "API" and Authentication Method "JWT (Private Key JWT)"
@@ -40,8 +46,7 @@ Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-az
 * Create a new Service User in the zitadel instance and select the Access Token Type to be "JWT".
 * Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new service user
 * Under Keys, create a new key of type "JSON" and note the key ID and download the key (JSON file).
-* You can now use this key's data to authenticate the service user to the API, 
-see the `src/service_user.py` file.
+* Put the path of the JSON file as `SERVICE_USER_PRIVATE_KEY_FILE` into the `.env` file.
 
 
 ## FastAPI setup
@@ -66,15 +71,22 @@ python src/main.py
 ### Swagger UI
 
 Open http://localhost:8001/docs in a new browser window, click on the "Authorize" button, 
-log in, and then access the `/protected` endpoint in the Swagger UI.
+log in, and then access the private endpoint in the Swagger UI.
 
 
 ### Service User
 
 While the server is running, in another terminal, run the `src/service_user.py` script to authenticate the service user.
-Make sure to have replaced the json_data key with the data from the service user key JSON file.
+Make sure to have the `SERVICE_USER_PRIVATE_KEY_FILE` set in the `.env` file (see above).
 
 ```bash
 uv run src/service_user.py
 ```
+
+---
+
+Credits:
+
+Partly inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-azure-auth) (as of v5).
+
 
