@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI, Security
+from fastapi import FastAPI, Security, Request
 import uvicorn
+from loguru import logger
 
 from auth import ZitadelAuthorizationCodeBearer
 from settings import get_settings
@@ -41,7 +42,8 @@ oauth2_scheme = ZitadelAuthorizationCodeBearer(
 
 
 @app.get("/protected", dependencies=[Security(oauth2_scheme, scopes=["user"])])
-def protected():
+def protected(request: Request):
+    logger.debug(f"User state: {request.state.user}")
     return {"message": "Hello, protected world!"}
 
 

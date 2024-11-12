@@ -56,6 +56,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Then open http://localhost:8001/docs in a new browser window and access the `/protected` endpoint in the Swagger UI.
+Then open http://localhost:8001/docs in a new browser window, click on the "Authorize" button, 
+log in, and then access the `/protected` endpoint in the Swagger UI.
 
 
