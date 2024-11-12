@@ -33,14 +33,24 @@ Python code example for FastAPI using Zitadel + Authorization Code Flow with PKC
 
 ## FastAPI setup
 
-Copy the `.env.example` file to `.env` and fill in the values above
+Copy the `.env.example` file to `.env` and fill in the values above.
 
+### Install with [uv](https://docs.astral.sh/uv/)
 
 ```
 uv install
 uv run python main.py
 ```
 
-Then open http://localhost:8001/docs in a new browser window and access the `/protected` endpoint in the Swagger UI
+### Alternatively, use classic venv:
+
+```angular2html
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
+
+Then open http://localhost:8001/docs in a new browser window and access the `/protected` endpoint in the Swagger UI.
 
 
