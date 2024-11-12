@@ -41,7 +41,7 @@ Inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-az
 * Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new service user
 * Under Keys, create a new key of type "JSON" and note the key ID and download the key (JSON file).
 * You can now use this key's data to authenticate the service user to the API, 
-see the `service_user.py` file.
+see the `src/service_user.py` file.
 
 
 ## FastAPI setup
@@ -51,7 +51,7 @@ Copy the `.env.example` file to `.env` and fill in the values above.
 ### Run with [uv](https://docs.astral.sh/uv/)
 
 ```bash
-uv run main.py
+uv run src/main.py
 ```
 
 ### Alternatively, use classic venv:
@@ -60,7 +60,7 @@ uv run main.py
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python main.py
+python src/main.py
 ```
 
 ### Swagger UI
@@ -71,10 +71,10 @@ log in, and then access the `/protected` endpoint in the Swagger UI.
 
 ### Service User
 
-While the server is running, in another terminal, run the `service_user.py` script to authenticate the service user.
+While the server is running, in another terminal, run the `src/service_user.py` script to authenticate the service user.
 Make sure to have replaced the json_data key with the data from the service user key JSON file.
 
 ```bash
-uv run service_user.py
+uv run src/service_user.py
 ```
 

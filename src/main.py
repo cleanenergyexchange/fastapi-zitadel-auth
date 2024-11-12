@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
 
 
 app = FastAPI(
+    title="fastapi-zitadel-auth demo",
     lifespan=lifespan,
     swagger_ui_oauth2_redirect_url="/oauth2-redirect",
     swagger_ui_init_oauth={
