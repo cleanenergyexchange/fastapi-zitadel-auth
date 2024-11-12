@@ -1,6 +1,3 @@
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
-
 from fastapi import FastAPI, Security, Request
 import uvicorn
 from loguru import logger
@@ -11,19 +8,21 @@ from settings import get_settings
 settings = get_settings()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
-    yield
-
-
 app = FastAPI(
-    title="fastapi-zitadel-auth demo",
-    lifespan=lifespan,
+    title="fastapi-zitadel-auth",
     swagger_ui_oauth2_redirect_url="/oauth2-redirect",
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": settings.OAUTH_CLIENT_ID,
-        "scopes": "openid email profile urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:projects:roles",
+        "scopes": " ".join(
+            [
+                "openid",
+                "email",
+                "profile",
+                "urn:zitadel:iam:org:project:id:zitadel:aud",
+                "urn:zitadel:iam:org:projects:roles",
+            ]
+        ),
     },
 )
 
@@ -42,9 +41,13 @@ oauth2_scheme = ZitadelAuthorizationCodeBearer(
 )
 
 
-@app.get("/protected", dependencies=[Security(oauth2_scheme, scopes=["user"])])
+@app.get(
+    "/protected",
+    summary="Zitadel-protected endpoint",
+    dependencies=[Security(oauth2_scheme, scopes=["user"])],
+)
 def protected(request: Request):
-    logger.debug(f"User state: {request.state.user}")
+    logger.debug(f"Claims: {request.state.user.claims}")
     return {"message": "Hello, protected world!"}
 
 
