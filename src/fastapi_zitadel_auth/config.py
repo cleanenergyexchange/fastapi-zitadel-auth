@@ -1,4 +1,4 @@
-from pydantic import BaseModel, AnyHttpUrl, Field, ConfigDict, computed_field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, computed_field
 
 
 class AuthConfig(BaseModel):
@@ -10,29 +10,29 @@ class AuthConfig(BaseModel):
     project_id: str = Field(..., description="Zitadel project ID")
     base_url: AnyHttpUrl = Field(..., description="Zitadel instance URL")
     algorithm: str = Field(default="RS256", description="JWT signing algorithm")
-    scopes: dict[str, str] = Field(
+    scopes: dict[str, str] | None = Field(
         default=None, description="OAuth2 scope descriptions"
     )
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def issuer(self) -> str:
         """Base URL without trailing slash for JWT issuer validation"""
         return str(self.base_url).rstrip("/")
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def jwks_url(self) -> str:
         """JWKS endpoint URL"""
         return f"{self.base_url}oauth/v2/keys"
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def authorization_url(self) -> str:
         """OAuth2 authorization endpoint URL"""
         return f"{self.base_url}oauth/v2/authorize"
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def token_url(self) -> str:
         """OAuth2 token endpoint URL"""

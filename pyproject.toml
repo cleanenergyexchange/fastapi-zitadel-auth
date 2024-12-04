@@ -33,8 +33,20 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.1",
     "pydantic-settings>=2.6.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
     "pytest>=8.3.4",
+    "respx>=0.21.1",
     "ruff>=0.8.1",
+    "types-cachetools>=5.5.0.20240820",
     "uvicorn>=0.32.1",
 ]
+
+[tool.pytest.ini_options]
+addopts = "-v -x --cov=src --cov-report=term-missing:skip-covered"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

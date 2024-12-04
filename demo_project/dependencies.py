@@ -1,5 +1,14 @@
-from settings import get_settings
-from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
+"""
+FastAPI dependencies
+"""
+
+try:
+    from demo_project.settings import get_settings
+except ImportError:
+    # ImportError handling since it's also used in tests
+    from settings import get_settings
+
+from fastapi_zitadel_auth import AuthConfig, ZitadelAuth
 
 settings = get_settings()
 

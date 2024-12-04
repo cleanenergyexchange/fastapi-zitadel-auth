@@ -1,16 +1,21 @@
+"""
+Authentication module for Zitadel OAuth2
+"""
+
 import logging
 from typing import TYPE_CHECKING, Any
 
+from fastapi.exceptions import HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer, SecurityScopes
 from fastapi.security.base import SecurityBase
 from jwt import (
-    InvalidAudienceError,
-    InvalidIssuerError,
-    InvalidIssuedAtError,
-    ImmatureSignatureError,
-    MissingRequiredClaimError,
-    InvalidTokenError,
     ExpiredSignatureError,
+    ImmatureSignatureError,
+    InvalidAudienceError,
+    InvalidIssuedAtError,
+    InvalidIssuerError,
+    InvalidTokenError,
+    MissingRequiredClaimError,
 )
 from starlette.requests import Request
 
@@ -56,9 +61,12 @@ class ZitadelAuth(SecurityBase):
     async def __call__(
         self, request: Request, security_scopes: SecurityScopes
     ) -> AuthenticatedUser | None:
+        """
+        Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
+        """
         try:
             # extract token from request
-            access_token = await self.oauth(request=request)
+            access_token = await self._extract_access_token(request)
             if access_token is None:
                 raise InvalidAuthException("No access token provided")
 
@@ -69,8 +77,7 @@ class ZitadelAuth(SecurityBase):
             log.debug(f"Required scopes: {security_scopes.scopes}")
 
             # Validate scopes
-            if not self._validate_scopes(claims, security_scopes.scopes):
-                raise InvalidAuthException("Insufficient permissions")
+            self._validate_scopes(claims, security_scopes.scopes)
 
             # Get the JWKS public key
             key = await self.key_manager.get_public_key(header.get("kid", ""))
@@ -111,14 +118,26 @@ class ZitadelAuth(SecurityBase):
             log.warning(f"Invalid token. Error: {error}", exc_info=True)
             raise InvalidAuthException("Unable to validate token") from error
 
+        except (InvalidAuthException, HTTPException):
+            raise
+
         except Exception as error:
             # Extra failsafe in case of a bug in a future version of the jwt library
             log.exception(f"Unable to process jwt token. Uncaught error: {error}")
             raise InvalidAuthException("Unable to process token") from error
 
+    async def _extract_access_token(self, request: Request) -> str | None:
+        """
+        Extract the access token from the request
+        """
+        return await self.oauth(request=request)
+
     def _validate_scopes(
         self, claims: dict[str, Any], required_scopes: list[str]
     ) -> bool:
+        """
+        Validate the token scopes against the required scopes
+        """
         permission_claim = f"urn:zitadel:iam:org:project:{self.config.project_id}:roles"
 
         if permission_claim not in claims or not isinstance(

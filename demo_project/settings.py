@@ -1,3 +1,7 @@
+"""
+Settings for the demo project
+"""
+
 from functools import lru_cache
 
 from pydantic import AnyHttpUrl

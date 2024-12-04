@@ -1,8 +1,9 @@
 import logging
 from typing import Any
+
 import httpx
-from cachetools import TTLCache
 import jwt
+from cachetools import TTLCache
 
 log = logging.getLogger("fastapi_zitadel_auth")
 
@@ -14,7 +15,7 @@ class KeyManager:
         self, jwks_url: str, algorithm: str, cache_ttl: int = 300, cache_size: int = 5
     ):
         self.jwks_url = jwks_url
-        self.cache = TTLCache(maxsize=cache_size, ttl=cache_ttl)
+        self.cache: TTLCache = TTLCache(maxsize=cache_size, ttl=cache_ttl)
         self.algorithm = algorithm
 
     async def get_public_key(self, kid: str) -> Any | None:

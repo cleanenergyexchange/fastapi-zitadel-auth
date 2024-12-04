@@ -1,10 +1,19 @@
+"""
+Sample FastAPI app with Zitadel authentication
+"""
+
 import logging
 
-from fastapi import FastAPI, Security, Request
 import uvicorn
+from fastapi import FastAPI, Request, Security
 
-from dependencies import auth
-from settings import get_settings
+try:
+    from demo_project.dependencies import auth  # type: ignore[no-redef]
+    from demo_project.settings import get_settings  # type: ignore[no-redef]
+except ImportError:
+    # ImportError handling since it's also used in tests
+    from dependencies import auth  # type: ignore[no-redef]
+    from settings import get_settings  # type: ignore[no-redef]
 
 settings = get_settings()
 print(f"Settings: {settings}")
@@ -37,7 +46,7 @@ def public():
 
 @app.get(
     "/api/private",
-    summary="Private endpoint, requiring a valid token with `user` scope",
+    summary="Private endpoint, requiring a valid token with `system` scope",
     dependencies=[Security(auth, scopes=["system"])],
 )
 def protected(request: Request):

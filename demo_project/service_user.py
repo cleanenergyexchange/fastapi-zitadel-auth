@@ -1,13 +1,13 @@
+"""
+This module demonstrates how to authenticate a service account with Zitadel.
+"""
+
 import asyncio
 import json
 import time
 import jwt as pyjwt
 from httpx import AsyncClient
 
-
-"""
-This module demonstrates how to authenticate a service account with Zitadel.
-"""
 
 # CONFIG: Replace the following values with your own
 
