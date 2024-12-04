@@ -2,7 +2,7 @@ from fastapi import FastAPI, Security, Request
 import uvicorn
 from loguru import logger
 
-from auth import ZitadelAuthorizationCodeBearer
+from fastapi_zitadel_auth import ZitadelAuthorizationCodeBearer
 from settings import get_settings
 
 settings = get_settings()
@@ -37,7 +37,6 @@ oauth2_scheme = ZitadelAuthorizationCodeBearer(
     },
     openapi_authorization_url=f"{settings.ZITADEL_DOMAIN}/oauth/v2/authorize",
     openapi_token_url=f"{settings.ZITADEL_DOMAIN}/oauth/v2/token",
-    openapi_description="Zitadel OAuth2 authentication using bearer token",
 )
 
 
