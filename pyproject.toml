@@ -1,17 +1,65 @@
 [project]
 name = "fastapi-zitadel-auth"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.0"  # change in src/fastapi_zitadel_auth/__init__.py as well
+description = "Zitadel authentication for FastAPI"
 readme = "README.md"
-requires-python = ">=3.12"
+authors = [
+    { name = "Clean Energy Exchange", email = "info@ceex.ch" }
+]
+homepage = "https://github.com/cleanenergyexchange/fastapi-zitadel-auth"
+repository = "https://github.com/cleanenergyexchange/fastapi-zitadel-auth"
+documentation = "https://github.com/cleanenergyexchange/fastapi-zitadel-auth"
+keywords = [
+    "async",
+    "asyncio",
+    "fastapi",
+    "zitadel",
+    "authentication",
+    "oauth",
+    "oidc",
+]
+requires-python = ">=3.10"
 dependencies = [
     "cachetools>=5.5.0",
     "cryptography>=43.0.3",
     "fastapi>=0.115.4",
     "httpx>=0.27.2",
-    "loguru>=0.7.2",
-    "pydantic-settings>=2.6.1",
     "pyjwt>=2.9.0",
-    "ruff>=0.7.3",
-    "uvicorn>=0.32.0",
 ]
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Environment :: Web Environment',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Software Development',
+    'Topic :: Software Development :: Libraries',
+    'Topic :: Software Development :: Libraries :: Application Frameworks',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.1",
+    "pydantic-settings>=2.6.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "pytest>=8.3.4",
+    "respx>=0.21.1",
+    "ruff>=0.8.1",
+    "types-cachetools>=5.5.0.20240820",
+    "uvicorn>=0.32.1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-v -x --cov=src --cov-report=term-missing:skip-covered"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

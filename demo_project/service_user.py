@@ -1,19 +1,30 @@
+"""
+This module demonstrates how to authenticate a service account with Zitadel.
+"""
+
 import asyncio
 import json
 import time
 import jwt as pyjwt
 from httpx import AsyncClient
-from loguru import logger
 
-from settings import get_settings
 
-"""
-This module demonstrates how to authenticate a service account with Zitadel.
-"""
+# CONFIG: Replace the following values with your own
 
-settings = get_settings()
-with open(settings.SERVICE_USER_PRIVATE_KEY_FILE, "r") as file:
+# The service account private key file downloaded from Zitadel
+SERVICE_USER_PRIVATE_KEY_FILE = "service_user.json"
+
+# The Zitadel instance URL
+ZITADEL_HOST = "https://myinstance.zitadel.cloud"
+
+# The project ID for which the service account is created
+ZITADEL_PROJECT_ID = "1234567"
+
+# Loading the service account private key JSON file
+with open(SERVICE_USER_PRIVATE_KEY_FILE, "r") as file:
     json_data = json.load(file)
+
+# END CONFIG
 
 # Extracting necessary values from the JSON data
 private_key = json_data["key"]
@@ -25,14 +36,13 @@ header = {"alg": "RS256", "kid": kid}
 payload = {
     "iss": user_id,
     "sub": user_id,
-    "aud": settings.ZITADEL_DOMAIN,
+    "aud": ZITADEL_HOST,
     "iat": int(time.time()),
     "exp": int(time.time()) + 3600,  # Token expires in 1 hour
 }
 
-# Generating JWT token with RS256 algorithm
+# Generating JWT token
 jwt_token = pyjwt.encode(payload, private_key, algorithm="RS256", headers=header)
-logger.debug(f"Locally signed token: {jwt_token}")
 
 
 async def main():
@@ -47,24 +57,18 @@ async def main():
                     "email",
                     "profile",
                     "urn:zitadel:iam:org:projects:roles",
-                    f"urn:zitadel:iam:org:project:id:{settings.ZITADEL_PROJECT_ID}:aud",
+                    f"urn:zitadel:iam:org:project:id:{ZITADEL_PROJECT_ID}:aud",
                 ]
             ),
             "assertion": jwt_token,
         }
 
         # Making a POST request to the OAuth2 token endpoint
-        response = await client.post(
-            url=f"{settings.ZITADEL_DOMAIN}/oauth/v2/token", data=data
-        )
+        response = await client.post(url=f"{ZITADEL_HOST}/oauth/v2/token", data=data)
 
         # Handling the response
-        if response.status_code == 200:
-            access_token = response.json()["access_token"]
-            logger.debug(f"Response: {response.json()}")
-        else:
-            logger.error(f"Error: {response.status_code} - {response.text}")
-            return
+        response.raise_for_status()
+        access_token = response.json()["access_token"]
 
         # Example API call using the acquired access token
         my_api_response = await client.get(
@@ -72,11 +76,9 @@ async def main():
             headers={"Authorization": f"Bearer {access_token}"},
         )
         if my_api_response.status_code == 200:
-            logger.info(my_api_response.json())
+            print(my_api_response.json())
         else:
-            logger.error(
-                f"Error: {my_api_response.status_code} - {my_api_response.text}"
-            )
+            print(f"Error: {my_api_response.status_code} - {my_api_response.text}")
 
 
 if __name__ == "__main__":

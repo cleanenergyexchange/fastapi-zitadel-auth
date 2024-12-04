@@ -1,16 +1,21 @@
+"""
+Settings for the demo project
+"""
+
 from functools import lru_cache
 
-from pydantic import FilePath
+from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    ZITADEL_DOMAIN: str
+    ZITADEL_HOST: AnyHttpUrl
     ZITADEL_PROJECT_ID: str
     OAUTH_CLIENT_ID: str
-    SERVICE_USER_PRIVATE_KEY_FILE: FilePath
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file="demo_project/.env", env_file_encoding="utf-8"
+    )
 
 
 @lru_cache

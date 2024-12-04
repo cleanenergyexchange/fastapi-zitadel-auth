@@ -1,92 +1,92 @@
-# fastapi-zitadel-auth
+# FastAPI Zitadel Auth
 
-Python example to protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
+Protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
 
-Details:
+Features:
 
 * Authorization Code Flow with PKCE
 * JWT signature validation using JWKS obtained from Zitadel
 * Service User authentication using JWT Profiles
 * Swagger UI integration
-* Python 3.12
+* Zitadel roles as scopes
+
 
 > [!WARNING]
 > This repo is a work in progress and should not be used in production just yet.
 
-## Zitadel setup
 
-### Project
-* Create a new project. 
-* in the General settings, tick "Assert Roles on Authentication" and "Check authorization on Authentication"
-* Note the project ID (also called "resource Id") as `ZITADEL_PROJECT_ID`
-* Under Roles, create a new role with key: `user` and Display Name "user" and assign it to the project. 
-
-### App 1: API
-* Create a new application in the project of type "API" and Authentication Method "JWT (Private Key JWT)"
-* Create a key of type "JSON"
-
-### App 2: User Agent
-* Create a new application in the project of type "User Agent" and Authentication Method "PKCE".
-* Toggle "Development Mode" to allow non-https redirect URIs
-* Under "Redirect URIs", add:
-  * `http://localhost:8001/`
-  * `http://localhost:8001/oauth2-redirect`
-* Token settings
-  * Change "Auth Token Type" from "Bearer Token" to "JWT"
-  * Tick "Add user roles to the access token"
-  * Tick "User roles inside ID token"
-* Note the Client Id (as `OAUTH_CLIENT_ID`)
-
-### User creation
-* Create a new User in the zitadel instance.
-* Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new user
-
-
-### Service User creation
-* Create a new Service User in the zitadel instance and select the Access Token Type to be "JWT".
-* Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new service user
-* Under Keys, create a new key of type "JSON" and note the key ID and download the key (JSON file).
-* Put the path of the JSON file as `SERVICE_USER_PRIVATE_KEY_FILE` into the `.env` file.
-
-
-## FastAPI setup
-
-Copy the `.env.example` file to `.env` and fill in the values above.
-
-### Run with [uv](https://docs.astral.sh/uv/)
+## Installation
 
 ```bash
-uv run src/main.py
+pip install fastapi-zitadel-auth
 ```
 
-### Alternatively, use classic venv:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python src/main.py
+## Usage
+
+### Configuration
+
+#### Zitadel
+Set up a new OAuth2 client in Zitadel according to the [docs/ZITADEL_SETUP.md](docs/ZITADEL_SETUP.md).
+
+#### FastAPI
+
+```python
+from fastapi import FastAPI, Request, Security
+from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
+
+# Your Zitadel configuration
+CLIENT_ID = 'your-zitadel-client-id'
+PROJECT_ID = 'your-zitadel-project-id'
+BASE_URL = 'https://your-instance-xyz.zitadel.cloud'
+
+# Create an AuthConfig object with your Zitadel configuration
+config = AuthConfig(
+    client_id=CLIENT_ID,
+    project_id=PROJECT_ID,
+    base_url=BASE_URL,
+    scopes={
+        "openid": "OpenID Connect",
+        "email": "Email",
+        "profile": "Profile",
+        "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
+        "urn:zitadel:iam:org:projects:roles": "Roles",
+    },
+)
+
+# Create a ZitadelAuth object with the AuthConfig usable as a FastAPI dependency
+auth = ZitadelAuth(config)
+
+# Create a FastAPI app and configure Swagger UI
+app = FastAPI(
+    title="fastapi-zitadel-auth demo",
+    swagger_ui_oauth2_redirect_url="/oauth2-redirect",
+    swagger_ui_init_oauth={
+        "usePkceWithAuthorizationCodeGrant": True,
+        "clientId": CLIENT_ID,
+        "scopes": " ".join(
+            [
+                "openid",
+                "email",
+                "profile",
+                "urn:zitadel:iam:org:project:id:zitadel:aud",
+                "urn:zitadel:iam:org:projects:roles",
+            ]
+        ),
+    },
+)
+
+# Create an endpoint and protect it with the ZitadelAuth dependency
+@app.get(
+    "/api/private",
+    summary="Private endpoint, requiring a valid token with `system` scope",
+    dependencies=[Security(auth, scopes=["system"])],
+)
+def private(request: Request):
+    return {
+        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.user_id}"
+    }
+
 ```
-
-### Swagger UI
-
-Open http://localhost:8001/docs in a new browser window, click on the "Authorize" button, 
-log in, and then access the private endpoint in the Swagger UI.
-
-
-### Service User
-
-While the server is running, in another terminal, run the `src/service_user.py` script to authenticate the service user.
-Make sure to have the `SERVICE_USER_PRIVATE_KEY_FILE` set in the `.env` file (see above).
-
-```bash
-uv run src/service_user.py
-```
-
----
-
-Credits:
-
-Partly inspired by [Intility/fastapi-azure-auth](https://github.com/Intility/fastapi-azure-auth) (as of v5).
 
 
