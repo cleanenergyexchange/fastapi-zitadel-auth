@@ -4,8 +4,11 @@ repos:
     rev: v0.8.1
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        entry: uv run ruff check src/
+        files: \.py$
       - id: ruff-format
+        entry: uv run ruff format src/
+        files: \.py$
 
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0

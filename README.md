@@ -10,6 +10,16 @@ Features:
 * Swagger UI integration
 * Zitadel roles as scopes
 
+<a href="https://python.org">
+    <img src="https://img.shields.io/badge/python-v3.10+-blue.svg?logo=python&logoColor=white&label=python" alt="Python version">
+</a>
+<a href="https://pypi.org/pypi/fastapi-zitadel-auth">
+    <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
+</a>
+<a href="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth">
+    <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/branch/main/graph/badge.svg?token=TODO" alt="Codecov">
+</a>
+
 
 > [!WARNING]
 > This repo is a work in progress and should not be used in production just yet.
@@ -89,4 +99,29 @@ def private(request: Request):
 
 ```
 
+## Demo app
 
+See `demo_project` for a complete example, including service user login. To run the demo app:
+
+```bash
+uv run demo_project/server.py
+```
+
+Then navigate to `http://localhost:8001/docs` to see the Swagger UI.
+
+
+### Service user
+
+Service users are "machine users" in Zitadel.
+
+To log in as a service user, change the config in `demo_project/service_user.py`, then
+
+```bash
+uv run demo_project/service_user.py
+```
+
+Make sure you have a running server at `http://localhost:8001`.
+
+## Development
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
