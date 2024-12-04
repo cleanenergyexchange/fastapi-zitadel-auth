@@ -1,15 +1,18 @@
+import logging
+
 from fastapi import FastAPI, Security, Request
 import uvicorn
-from loguru import logger
 
-from fastapi_zitadel_auth import ZitadelAuthorizationCodeBearer
+from dependencies import auth
 from settings import get_settings
 
 settings = get_settings()
-
+print(f"Settings: {settings}")
+logger = logging.getLogger("fastapi_zitadel_auth")
+logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI(
-    title="fastapi-zitadel-auth",
+    title="fastapi-zitadel-auth demo",
     swagger_ui_oauth2_redirect_url="/oauth2-redirect",
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
@@ -26,19 +29,6 @@ app = FastAPI(
     },
 )
 
-oauth2_scheme = ZitadelAuthorizationCodeBearer(
-    app_client_id=settings.OAUTH_CLIENT_ID,
-    scopes={
-        "openid": "OpenID Connect",
-        "email": "Email",
-        "profile": "Profile",
-        "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
-        "urn:zitadel:iam:org:projects:roles": "Roles",
-    },
-    openapi_authorization_url=f"{settings.ZITADEL_DOMAIN}/oauth/v2/authorize",
-    openapi_token_url=f"{settings.ZITADEL_DOMAIN}/oauth/v2/token",
-)
-
 
 @app.get("/api/public", summary="Public endpoint")
 def public():
@@ -48,14 +38,16 @@ def public():
 @app.get(
     "/api/private",
     summary="Private endpoint, requiring a valid token with `user` scope",
-    dependencies=[Security(oauth2_scheme, scopes=["user"])],
+    dependencies=[Security(auth, scopes=["system"])],
 )
 def protected(request: Request):
-    logger.debug(f"Claims: {request.state.user.claims}")
+    logger.debug(f"User object: {request.state.user}")
+    logger.debug(f"User claims: {request.state.user.claims}")
+    logger.debug(f"User roles: {request.state.user.claims.project_roles}")
     return {
-        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.claims['sub']}"
+        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.user_id}"
     }
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", reload=True, port=8001)
+    uvicorn.run("server:app", reload=True, port=8001)

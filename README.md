@@ -1,14 +1,14 @@
 # fastapi-zitadel-auth
 
-Python example to protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
+Protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
 
-Details:
+Features:
 
 * Authorization Code Flow with PKCE
 * JWT signature validation using JWKS obtained from Zitadel
 * Service User authentication using JWT Profiles
 * Swagger UI integration
-* Python 3.12
+
 
 > [!WARNING]
 > This repo is a work in progress and should not be used in production just yet.
@@ -38,7 +38,7 @@ Details:
 * Note the Client Id (as `OAUTH_CLIENT_ID`)
 
 ### User creation
-* Create a new User in the zitadel instance.
+* Create a new User in the Zitadel instance.
 * Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new user
 
 
@@ -46,7 +46,7 @@ Details:
 * Create a new Service User in the zitadel instance and select the Access Token Type to be "JWT".
 * Under Authorizations, create new authorization by searching for the project name and assign the "user" role to the new service user
 * Under Keys, create a new key of type "JSON" and note the key ID and download the key (JSON file).
-* Put the path of the JSON file as `SERVICE_USER_PRIVATE_KEY_FILE` into the `.env` file.
+* Update the config in `demo_project/service_user.py` 
 
 
 ## FastAPI setup

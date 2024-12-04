@@ -1,7 +1,6 @@
-from fastapi_zitadel_auth.auth import ZitadelAuthorizationCodeBearer
+from fastapi_zitadel_auth.auth import ZitadelAuth
+from fastapi_zitadel_auth.config import AuthConfig
 
-__all__ = [
-    ZitadelAuthorizationCodeBearer,
-]
+__all__ = [ZitadelAuth, AuthConfig]
 
 __version__ = "0.1.0"
