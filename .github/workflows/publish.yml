@@ -4,6 +4,10 @@ on:
   release:
     types: [ published ]
 
+permissions:
+  id-token: write  # Required for trusted publishing
+  contents: read   # Required for checkout
+
 jobs:
   run:
     name: Build and publish release
@@ -23,7 +27,6 @@ jobs:
       - name: Build
         run: uv build
 
+      # Using Trusted Publishing via PyPI and uv
       - name: Publish
         run: uv publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
