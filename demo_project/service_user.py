@@ -14,8 +14,10 @@ except ImportError:
     # ImportError handling since it's also used in tests
     from demo_project.settings import get_settings
 
+# UPDATE THIS VALUE ----------------------------------------------
 # The service account private key file downloaded from Zitadel
 SERVICE_USER_PRIVATE_KEY_FILE = "service_user.json"
+# ---------------------------------------------------------------
 
 # Loading the service account private key JSON file
 with open(SERVICE_USER_PRIVATE_KEY_FILE, "r") as file:
