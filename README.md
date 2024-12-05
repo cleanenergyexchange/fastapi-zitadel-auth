@@ -24,7 +24,7 @@ Protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
 * Zitadel roles as scopes
 
 
-> [!INFO]
+> [!NOTE]
 > This library implements JWT, locally validated using JWKS, as it prioritizes performance, 
 > see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs).
 > If you need to validate opaque tokens using Introspection, please open an issue – PRs are welcome!
