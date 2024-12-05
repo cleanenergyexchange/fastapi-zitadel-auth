@@ -50,7 +50,7 @@ from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
 auth = ZitadelAuth(AuthConfig(
     client_id="your-client-id",
     project_id="your-project-id",
-    base_url="https://your-instance.zitadel.cloud"
+    zitadel_host="https://your-instance.zitadel.cloud"
 ))
 
 app = FastAPI(
@@ -60,6 +60,7 @@ app = FastAPI(
         "scopes": "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:projects:roles"
     }
 )
+
 
 @app.get("/protected", dependencies=[Security(auth)])
 def protected_route():
@@ -91,7 +92,7 @@ BASE_URL = 'https://your-instance-xyz.zitadel.cloud'
 config = AuthConfig(
     client_id=CLIENT_ID,
     project_id=PROJECT_ID,
-    base_url=BASE_URL,
+    zitadel_host=BASE_URL,
     scopes={
         "openid": "OpenID Connect",
         "email": "Email",
@@ -122,6 +123,7 @@ app = FastAPI(
         ),
     },
 )
+
 
 # Create an endpoint and protect it with the ZitadelAuth dependency
 @app.get(
