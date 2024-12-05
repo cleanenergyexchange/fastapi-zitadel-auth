@@ -8,8 +8,10 @@ jobs:
   run:
     name: Build and publish release
     runs-on: ubuntu-latest
+    environment:
+      name: release
     permissions:
-      id-token: write
+      id-token: write # For PyPI's trusted publishing
     steps:
       - uses: actions/checkout@v4
 
