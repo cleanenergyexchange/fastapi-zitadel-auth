@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      time: "09:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "deps(actions):"
+
+  # uv dependabot for uv.lock not yet available, see https://docs.astral.sh/uv/guides/integration/dependency-bots/#dependabot
+#  - package-ecosystem: "pip"
+#    schedule:
+#      interval: "weekly"
+#      time: "09:00"
+#      timezone: "Europe/Zurich"
+#    commit-message:
+#      prefix: "deps(api):"
