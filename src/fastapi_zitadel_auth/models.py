@@ -9,8 +9,8 @@ class JWTClaims(BaseModel):
     exp: int
     iat: int
     iss: str
-    nbf: int
     sub: str
+    nbf: int | None = None
     jti: str | None = None
 
 
