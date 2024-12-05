@@ -1,18 +1,20 @@
 # FastAPI Zitadel Auth
 
-Protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
+FastAPI Zitadel Auth is a Python package that simplifies OAuth2/OIDC authentication in FastAPI applications 
+using [Zitadel](https://zitadel.com/) as the identity provider.
+It handles token validation, role-based access control, and Swagger UI integration with just a few lines of code.
 
 <a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml" target="_blank">
     <img src="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml/badge.svg" alt="Test status">
+</a>
+<a href="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth">
+    <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/graph/badge.svg?token=A3TSXDVLQT" alt="Code coverage"/> 
 </a>
 <a href="https://pypi.org/project/fastapi-zitadel-auth" target="_blank">
     <img src="https://img.shields.io/pypi/pyversions/fastapi-zitadel-auth.svg?color=%2334D058" alt="Supported Python versions">
 </a>
 <a href="https://pypi.org/pypi/fastapi-zitadel-auth">
     <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
-</a>
-<a href="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth">
-    <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/graph/badge.svg?token=A3TSXDVLQT" alt="Code coverage"/> 
 </a>
 
 ## Features
@@ -30,12 +32,30 @@ Protect FastAPI endpoints using [Zitadel](https://zitadel.com/).
 > If you need to validate opaque tokens using Introspection, please open an issue – PRs are welcome!
 
 
-## Installation
+## Installation and quick start
 
 ```bash
 pip install fastapi-zitadel-auth
 ```
 
+```python
+from fastapi import FastAPI, Security
+from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
+
+auth = ZitadelAuth(AuthConfig(
+    client_id="your-client-id",
+    project_id="your-project-id",
+    base_url="https://your-instance.zitadel.cloud"
+))
+
+app = FastAPI()
+
+@app.get("/protected", dependencies=[Security(auth)])
+def protected_route():
+    return {"message": "Access granted!"}
+```
+
+See the [Usage](#usage) section for more details.
 
 ## Usage
 
