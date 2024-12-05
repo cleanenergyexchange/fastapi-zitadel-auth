@@ -17,7 +17,7 @@ Features:
     <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
 </a>
 <a href="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth">
-    <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/branch/main/graph/badge.svg?token=TODO" alt="Codecov">
+    <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/graph/badge.svg?token=A3TSXDVLQT" alt="Code coverage"/> 
 </a>
 
 
@@ -37,6 +37,7 @@ pip install fastapi-zitadel-auth
 ### Configuration
 
 #### Zitadel
+
 Set up a new OAuth2 client in Zitadel according to the [docs/ZITADEL_SETUP.md](docs/ZITADEL_SETUP.md).
 
 #### FastAPI
