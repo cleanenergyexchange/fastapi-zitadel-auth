@@ -16,7 +16,7 @@ def valid_config_data() -> dict:
     return {
         "client_id": "test-client-123",
         "project_id": "proj-123",
-        "base_url": "https://auth.example.com/",
+        "zitadel_host": "https://auth.example.com/",
     }
 
 
@@ -28,7 +28,7 @@ class TestAuthConfig:
         config = AuthConfig(**valid_config_data)
         assert config.client_id == "test-client-123"
         assert config.project_id == "proj-123"
-        assert str(config.base_url) == "https://auth.example.com/"
+        assert str(config.zitadel_host) == "https://auth.example.com/"
         assert config.algorithm == "RS256"  # default value
         assert config.scopes is None  # default value
 
@@ -38,7 +38,7 @@ class TestAuthConfig:
         assert config.issuer == "https://auth.example.com"
 
         # Test without trailing slash
-        valid_config_data["base_url"] = "https://auth.example.com"
+        valid_config_data["zitadel_host"] = "https://auth.example.com"
         config = AuthConfig(**valid_config_data)
         assert config.issuer == "https://auth.example.com"
 
@@ -70,7 +70,7 @@ class TestAuthConfig:
 
     def test_invalid_url(self, valid_config_data):
         """Test validation error for invalid URL"""
-        valid_config_data["base_url"] = "not-a-url"
+        valid_config_data["zitadel_host"] = "not-a-url"
         with pytest.raises(ValidationError) as exc_info:
             AuthConfig(**valid_config_data)
         errors = exc_info.value.errors()
@@ -81,7 +81,7 @@ class TestAuthConfig:
         with pytest.raises(ValidationError) as exc_info:
             AuthConfig()
         errors = exc_info.value.errors()
-        required_fields = {"client_id", "project_id", "base_url"}
+        required_fields = {"client_id", "project_id", "zitadel_host"}
         error_fields = {error["loc"][0] for error in errors}
         assert required_fields.issubset(error_fields)
 

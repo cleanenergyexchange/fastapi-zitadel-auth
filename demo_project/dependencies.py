@@ -15,7 +15,7 @@ settings = get_settings()
 config = AuthConfig(
     client_id=settings.OAUTH_CLIENT_ID,
     project_id=settings.ZITADEL_PROJECT_ID,
-    base_url=settings.ZITADEL_HOST,
+    zitadel_host=settings.ZITADEL_HOST,
     scopes={
         "openid": "OpenID Connect",
         "email": "Email",

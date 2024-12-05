@@ -8,23 +8,22 @@ import time
 import jwt as pyjwt
 from httpx import AsyncClient
 
-
-# CONFIG: Replace the following values with your own
+try:
+    from settings import get_settings
+except ImportError:
+    # ImportError handling since it's also used in tests
+    from demo_project.settings import get_settings
 
 # The service account private key file downloaded from Zitadel
 SERVICE_USER_PRIVATE_KEY_FILE = "service_user.json"
-
-# The Zitadel instance URL
-ZITADEL_HOST = "https://myinstance.zitadel.cloud"
-
-# The project ID for which the service account is created
-ZITADEL_PROJECT_ID = "1234567"
 
 # Loading the service account private key JSON file
 with open(SERVICE_USER_PRIVATE_KEY_FILE, "r") as file:
     json_data = json.load(file)
 
-# END CONFIG
+
+# get settings from the settings module for simplicity
+settings = get_settings()
 
 # Extracting necessary values from the JSON data
 private_key = json_data["key"]
@@ -36,7 +35,7 @@ header = {"alg": "RS256", "kid": kid}
 payload = {
     "iss": user_id,
     "sub": user_id,
-    "aud": ZITADEL_HOST,
+    "aud": str(settings.ZITADEL_HOST).rstrip("/"),  # Remove trailing slash
     "iat": int(time.time()),
     "exp": int(time.time()) + 3600,  # Token expires in 1 hour
 }
@@ -57,14 +56,16 @@ async def main():
                     "email",
                     "profile",
                     "urn:zitadel:iam:org:projects:roles",
-                    f"urn:zitadel:iam:org:project:id:{ZITADEL_PROJECT_ID}:aud",
+                    f"urn:zitadel:iam:org:project:id:{settings.ZITADEL_PROJECT_ID}:aud",
                 ]
             ),
             "assertion": jwt_token,
         }
 
         # Making a POST request to the OAuth2 token endpoint
-        response = await client.post(url=f"{ZITADEL_HOST}/oauth/v2/token", data=data)
+        response = await client.post(
+            url=f"{settings.ZITADEL_HOST}oauth/v2/token", data=data
+        )
 
         # Handling the response
         response.raise_for_status()

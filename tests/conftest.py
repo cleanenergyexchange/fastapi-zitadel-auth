@@ -36,7 +36,7 @@ def fastapi_app():
     FastAPI app fixture
     """
     auth_config = AuthConfig(
-        base_url="https://issuer.zitadel.cloud",
+        zitadel_host="https://issuer.zitadel.cloud",
         client_id="123456789",
         project_id="987654321",
         algorithm="RS256",
@@ -67,7 +67,7 @@ def auth_config():
     AuthConfig fixture
     """
     return AuthConfig(
-        base_url="https://issuer.zitadel.cloud",
+        zitadel_host="https://issuer.zitadel.cloud",
         client_id="123456789",
         project_id="987654321",
         algorithm="RS256",
