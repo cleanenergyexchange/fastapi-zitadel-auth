@@ -1,8 +1,8 @@
 # FastAPI Zitadel Auth
 
-FastAPI Zitadel Auth is a Python package that simplifies OAuth2/OIDC authentication in FastAPI applications 
-using [Zitadel](https://zitadel.com/) as the identity provider.
-It handles token validation, role-based access control, and Swagger UI integration with just a few lines of code.
+Simplify OAuth2 authentication in FastAPI apps using [**Zitadel**](https://zitadel.com/) as the identity service, 
+including token validation, role-based access control, and Swagger UI integration.
+
 
 <a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml" target="_blank">
     <img src="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml/badge.svg" alt="Test status">
@@ -23,11 +23,12 @@ It handles token validation, role-based access control, and Swagger UI integrati
 
 ## Features
 
-* Authorization Code Flow with PKCE
-* JWT signature validation using JWKS obtained from Zitadel
-* Service User authentication using JWT Profiles
+* Authorization Code flow with PKCE
+* JWT validation using Zitadel JWKS
+* Role-based access control using Zitadel roles
+* Service user authentication (JWT Profile)
 * Swagger UI integration
-* Zitadel roles as scopes
+* Type-safe token validation
 
 
 > [!NOTE]
@@ -49,10 +50,17 @@ from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
 auth = ZitadelAuth(AuthConfig(
     client_id="your-client-id",
     project_id="your-project-id",
-    base_url="https://your-instance.zitadel.cloud"
+    zitadel_host="https://your-instance.zitadel.cloud"
 ))
 
-app = FastAPI()
+app = FastAPI(
+    swagger_ui_init_oauth={
+        "usePkceWithAuthorizationCodeGrant": True,
+        "clientId": 'your-client-id',
+        "scopes": "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:projects:roles"
+    }
+)
+
 
 @app.get("/protected", dependencies=[Security(auth)])
 def protected_route():
@@ -67,7 +75,7 @@ See the [Usage](#usage) section for more details.
 
 #### Zitadel
 
-Set up a new OAuth2 client in Zitadel according to the [docs/ZITADEL_SETUP.md](docs/ZITADEL_SETUP.md).
+Set up a project in Zitadel according to [docs/ZITADEL_SETUP.md](docs/ZITADEL_SETUP.md).
 
 #### FastAPI
 
@@ -84,7 +92,7 @@ BASE_URL = 'https://your-instance-xyz.zitadel.cloud'
 config = AuthConfig(
     client_id=CLIENT_ID,
     project_id=PROJECT_ID,
-    base_url=BASE_URL,
+    zitadel_host=BASE_URL,
     scopes={
         "openid": "OpenID Connect",
         "email": "Email",
@@ -115,6 +123,7 @@ app = FastAPI(
         ),
     },
 )
+
 
 # Create an endpoint and protect it with the ZitadelAuth dependency
 @app.get(

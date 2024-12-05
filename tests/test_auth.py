@@ -261,7 +261,7 @@ def test_validate_scopes_project_id(project_id, claims, expected_error):
     Test the _validate_scopes method with different project IDs
     """
     config = AuthConfig(
-        base_url="https://issuer.zitadel.cloud",
+        zitadel_host="https://issuer.zitadel.cloud",
         client_id="123456789",
         project_id=project_id,
         algorithm="RS256",
