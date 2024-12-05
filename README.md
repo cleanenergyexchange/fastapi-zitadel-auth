@@ -10,12 +10,16 @@ It handles token validation, role-based access control, and Swagger UI integrati
 <a href="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth">
     <img src="https://codecov.io/gh/cleanenergyexchange/fastapi-zitadel-auth/graph/badge.svg?token=A3TSXDVLQT" alt="Code coverage"/> 
 </a>
-<a href="https://pypi.org/project/fastapi-zitadel-auth" target="_blank">
-    <img src="https://img.shields.io/pypi/pyversions/fastapi-zitadel-auth.svg?color=%2334D058" alt="Supported Python versions">
-</a>
 <a href="https://pypi.org/pypi/fastapi-zitadel-auth">
     <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
 </a>
+<a href="https://python.org">
+    <img src="https://img.shields.io/badge/python-v3.10+-blue.svg?logo=python&logoColor=white&label=python" alt="Python versions">
+</a>
+<a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENSE">
+    <img src="https://badgen.net/github/license/cleanenergyexchange/fastapi-zitadel-auth/" alt="License"/>
+</a>
+
 
 ## Features
 
