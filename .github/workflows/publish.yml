@@ -28,5 +28,12 @@ jobs:
         run: uv build
 
       # Using Trusted Publishing via PyPI and uv
-      - name: Publish
-        run: uv publish --verbose --trusted-publishing always
+      - name: Debug and Publish
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Workflow file contents:"
+          cat .github/workflows/publish.yml
+          echo "Environment variables:"
+          env | grep -i action
+          echo "Running publish command..."
+          uv publish --verbose --trusted-publishing always
