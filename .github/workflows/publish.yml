@@ -11,6 +11,7 @@ jobs:
     environment:
       name: release
     permissions:
+      contents: read
       id-token: write # For PyPI's trusted publishing
     steps:
       - uses: actions/checkout@v4
