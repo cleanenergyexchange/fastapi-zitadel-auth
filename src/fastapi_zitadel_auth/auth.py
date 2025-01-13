@@ -37,6 +37,9 @@ class ZitadelAuth(SecurityBase):
     Zitadel OAuth2 authentication using bearer token
     """
 
+    user_model: AuthenticatedUser = AuthenticatedUser
+    claims_model: ZitadelClaims = ZitadelClaims
+
     def __init__(self, config: AuthConfig) -> None:
         """
         Initialize the ZitadelAuth object
@@ -93,8 +96,8 @@ class ZitadelAuth(SecurityBase):
             )
 
             # Create the authenticated user object and attach it to starlette.request.state
-            user = AuthenticatedUser(
-                claims=ZitadelClaims.model_validate(verified_claims),
+            user = self.user_model(
+                claims=self.claims_model.model_validate(verified_claims),
                 access_token=access_token,
             )
             request.state.user = user
