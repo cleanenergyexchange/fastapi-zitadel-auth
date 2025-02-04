@@ -3,7 +3,7 @@ Authentication module for Zitadel OAuth2
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi.exceptions import HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer, SecurityScopes
@@ -17,19 +17,18 @@ from jwt import (
     InvalidTokenError,
     MissingRequiredClaimError,
 )
+from pydantic import HttpUrl
 from starlette.requests import Request
 
-from .config import AuthConfig
 from .exceptions import InvalidAuthException
-from .jwks import KeyManager
 from .models import AuthenticatedUser, ZitadelClaims
+from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
 if TYPE_CHECKING:  # pragma: no cover
     from jwt.algorithms import AllowedPublicKeys  # noqa: F401
 
 log = logging.getLogger("fastapi_zitadel_auth")
-logging.basicConfig(level=logging.DEBUG)
 
 
 class ZitadelAuth(SecurityBase):
@@ -37,24 +36,39 @@ class ZitadelAuth(SecurityBase):
     Zitadel OAuth2 authentication using bearer token
     """
 
-    def __init__(self, config: AuthConfig) -> None:
+    def __init__(
+        self,
+        issuer: HttpUrl,
+        project_id: str,
+        client_id: str,
+        scopes: dict[str, str],
+        leeway: float = 0,
+    ) -> None:
         """
         Initialize the ZitadelAuth object
-
-        :param config: AuthConfig object
         """
-        self.config = config
+        self.client_id = client_id
+        self.project_id = project_id
+        self.issuer = str(issuer).rstrip("/")
+        self.leeway = leeway
+
+        self.openid_config = OpenIdConfig(
+            issuer=self.issuer,
+            config_url=f"{self.issuer}/.well-known/openid-configuration",
+            authorization_url=f"{self.issuer}/oauth/v2/authorize",
+            token_url=f"{self.issuer}/oauth/v2/token",
+            jwks_uri=f"{self.issuer}/oauth/v2/keys",
+        )
+
         self.oauth = OAuth2AuthorizationCodeBearer(
-            authorizationUrl=config.authorization_url,
-            tokenUrl=config.token_url,
-            scopes=config.scopes,
+            authorizationUrl=self.openid_config.authorization_url,
+            tokenUrl=self.openid_config.token_url,
+            scopes=scopes,
             scheme_name="ZitadelAuthorizationCodeBearer",
             description="Zitadel OAuth2 authentication using bearer token",
         )
-        self.token_validator = TokenValidator(algorithm=config.algorithm)
-        self.key_manager = KeyManager(
-            jwks_url=config.jwks_url, algorithm=config.algorithm
-        )
+
+        self.token_validator = TokenValidator()
         self.model = self.oauth.model
         self.scheme_name = self.oauth.scheme_name
 
@@ -64,6 +78,7 @@ class ZitadelAuth(SecurityBase):
         """
         Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
         """
+
         try:
             # extract token from request
             access_token = await self._extract_access_token(request)
@@ -72,24 +87,30 @@ class ZitadelAuth(SecurityBase):
 
             # Parse unverified header and claims
             header, claims = self.token_validator.parse_unverified(token=access_token)
-            log.debug(f"Header: {header}")
-            log.debug(f"Claims: {claims}")
-            log.debug(f"Required scopes: {security_scopes.scopes}")
+            log.debug("Header: %s", header)
+            log.debug("Claims: %s", claims)
+            log.debug("Required scopes: %s", ",".join(security_scopes.scopes))
 
             # Validate scopes
-            self._validate_scopes(claims, security_scopes.scopes)
+            self.token_validator.validate_scopes(
+                self.project_id, claims, security_scopes.scopes
+            )
 
-            # Get the JWKS public key
-            key = await self.key_manager.get_public_key(header.get("kid", ""))
-            if not key:
+            # Load or refresh the openid config
+            await self.openid_config.load_config()
+
+            # Get the JWKS key for the token
+            key = self.openid_config.signing_keys.get(header.get("kid", ""))
+            if key is None:
                 raise InvalidAuthException("No valid signing key found")
 
             # Verify the token with the public key
             verified_claims = self.token_validator.verify(
                 token=access_token,
                 key=key,
-                audiences=[self.config.client_id, self.config.project_id],
-                issuer=self.config.issuer,
+                audiences=[self.client_id, self.project_id],
+                issuer=self.openid_config.issuer,
+                leeway=self.leeway,
             )
 
             # Create the authenticated user object and attach it to starlette.request.state
@@ -122,7 +143,7 @@ class ZitadelAuth(SecurityBase):
             raise
 
         except Exception as error:
-            # Extra failsafe in case of a bug in a future version of the jwt library
+            # Extra failsafe in case of a bug
             log.exception(f"Unable to process jwt token. Uncaught error: {error}")
             raise InvalidAuthException("Unable to process token") from error
 
@@ -131,24 +152,3 @@ class ZitadelAuth(SecurityBase):
         Extract the access token from the request
         """
         return await self.oauth(request=request)
-
-    def _validate_scopes(
-        self, claims: dict[str, Any], required_scopes: list[str]
-    ) -> bool:
-        """
-        Validate the token scopes against the required scopes
-        """
-        permission_claim = f"urn:zitadel:iam:org:project:{self.config.project_id}:roles"
-
-        if permission_claim not in claims or not isinstance(
-            claims[permission_claim], dict
-        ):
-            log.warning(f"Missing or invalid roles in token claims: {permission_claim}")
-            raise InvalidAuthException("Invalid token structure")
-
-        project_roles = claims[permission_claim]
-        for required_scope in required_scopes:
-            if required_scope not in project_roles:
-                log.warning(f"Token does not have required scope: {required_scope}")
-                raise InvalidAuthException("Not enough permissions")
-        return True

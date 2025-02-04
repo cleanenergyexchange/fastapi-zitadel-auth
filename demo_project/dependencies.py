@@ -8,14 +8,14 @@ except ImportError:
     # ImportError handling since it's also used in tests
     from settings import get_settings
 
-from fastapi_zitadel_auth import AuthConfig, ZitadelAuth
+from fastapi_zitadel_auth import ZitadelAuth
 
 settings = get_settings()
 
-config = AuthConfig(
-    client_id=settings.OAUTH_CLIENT_ID,
+zitadel_auth = ZitadelAuth(
+    issuer=settings.ZITADEL_HOST,
     project_id=settings.ZITADEL_PROJECT_ID,
-    zitadel_host=settings.ZITADEL_HOST,
+    client_id=settings.OAUTH_CLIENT_ID,
     scopes={
         "openid": "OpenID Connect",
         "email": "Email",
@@ -24,5 +24,3 @@ config = AuthConfig(
         "urn:zitadel:iam:org:projects:roles": "Roles",
     },
 )
-
-auth = ZitadelAuth(config)

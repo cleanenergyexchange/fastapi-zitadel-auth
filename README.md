@@ -13,6 +13,9 @@ including token validation, role-based access control, and Swagger UI integratio
 <a href="https://pypi.org/pypi/fastapi-zitadel-auth">
     <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
 </a>
+<a href="https://pepy.tech/projects/fastapi-zitadel-auth">
+    <img src="https://static.pepy.tech/badge/fastapi-zitadel-auth/month" alt="PyPI Downloads">
+</a>
 <a href="https://python.org">
     <img src="https://img.shields.io/badge/python-v3.10+-blue.svg?logo=python&logoColor=white&label=python" alt="Python versions">
 </a>
@@ -43,32 +46,6 @@ including token validation, role-based access control, and Swagger UI integratio
 pip install fastapi-zitadel-auth
 ```
 
-```python
-from fastapi import FastAPI, Security
-from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
-
-auth = ZitadelAuth(AuthConfig(
-    client_id="your-client-id",
-    project_id="your-project-id",
-    zitadel_host="https://your-instance.zitadel.cloud"
-))
-
-app = FastAPI(
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": True,
-        "clientId": 'your-client-id',
-        "scopes": "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:projects:roles"
-    }
-)
-
-
-@app.get("/protected", dependencies=[Security(auth)])
-def protected_route():
-    return {"message": "Access granted!"}
-```
-
-See the [Usage](#usage) section for more details.
-
 ## Usage
 
 ### Configuration
@@ -80,47 +57,48 @@ Set up a project in Zitadel according to [docs/ZITADEL_SETUP.md](docs/ZITADEL_SE
 #### FastAPI
 
 ```python
-from fastapi import FastAPI, Request, Security
-from fastapi_zitadel_auth import ZitadelAuth, AuthConfig
+from contextlib import asynccontextmanager
 
-# Your Zitadel configuration
+from fastapi import FastAPI, Request, Security
+from pydantic import HttpUrl
+from fastapi_zitadel_auth import ZitadelAuth
+
+# define your Zitadel project ID, client ID and scopes
 CLIENT_ID = 'your-zitadel-client-id'
 PROJECT_ID = 'your-zitadel-project-id'
-BASE_URL = 'https://your-instance-xyz.zitadel.cloud'
+SCOPES = {
+    "openid": "OpenID Connect",
+    "email": "Email",
+    "profile": "Profile",
+    "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
+    "urn:zitadel:iam:org:projects:roles": "Roles",
+}
 
-# Create an AuthConfig object with your Zitadel configuration
-config = AuthConfig(
-    client_id=CLIENT_ID,
+
+# Create a ZitadelAuth object usable as a FastAPI dependency
+zitadel_auth = ZitadelAuth(
+    issuer=HttpUrl('https://your-instance-xyz.zitadel.cloud'),
     project_id=PROJECT_ID,
-    zitadel_host=BASE_URL,
-    scopes={
-        "openid": "OpenID Connect",
-        "email": "Email",
-        "profile": "Profile",
-        "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
-        "urn:zitadel:iam:org:projects:roles": "Roles",
-    },
+    client_id=CLIENT_ID,
+    scopes=SCOPES,
 )
 
-# Create a ZitadelAuth object with the AuthConfig usable as a FastAPI dependency
-auth = ZitadelAuth(config)
+# Load OpenID configuration at startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa
+    await zitadel_auth.openid_config.load_config()
+    yield
+
 
 # Create a FastAPI app and configure Swagger UI
 app = FastAPI(
     title="fastapi-zitadel-auth demo",
+    lifespan=lifespan,
     swagger_ui_oauth2_redirect_url="/oauth2-redirect",
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": CLIENT_ID,
-        "scopes": " ".join(
-            [
-                "openid",
-                "email",
-                "profile",
-                "urn:zitadel:iam:org:project:id:zitadel:aud",
-                "urn:zitadel:iam:org:projects:roles",
-            ]
-        ),
+        "scopes": list(SCOPES.keys()),
     },
 )
 
@@ -128,8 +106,8 @@ app = FastAPI(
 # Create an endpoint and protect it with the ZitadelAuth dependency
 @app.get(
     "/api/private",
-    summary="Private endpoint, requiring a valid token with `system` scope",
-    dependencies=[Security(auth, scopes=["system"])],
+    summary="Private endpoint, requiring a valid token with `user` scope",
+    dependencies=[Security(zitadel_auth, scopes=["user"])],
 )
 def private(request: Request):
     return {
@@ -143,7 +121,7 @@ def private(request: Request):
 See `demo_project` for a complete example, including service user login. To run the demo app:
 
 ```bash
-uv run demo_project/server.py
+uv run demo_project/main.py
 ```
 
 Then navigate to `http://localhost:8001/docs` to see the Swagger UI.
