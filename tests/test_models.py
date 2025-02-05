@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from fastapi_zitadel_auth.models import AuthenticatedUser, JWTClaims, ZitadelClaims
+from fastapi_zitadel_auth.models import ZitadelUser, JWTClaims, ZitadelClaims
 
 
 @pytest.fixture
@@ -172,15 +172,15 @@ class TestZitadelClaims:
 
 class TestAuthenticatedUser:
     """
-    AuthenticatedUser model tests
+    ZitadelUser model tests
     """
 
     def test_valid_user(self, valid_zitadel_claims):
         """
-        Test that the AuthenticatedUser model can be instantiated with valid claims
+        Test that the ZitadelUser model can be instantiated with valid claims
         """
         claims = ZitadelClaims(**valid_zitadel_claims)
-        user = AuthenticatedUser(claims=claims, access_token="test-token")
+        user = ZitadelUser(claims=claims, access_token="test-token")
         assert user.user_id == "user123"
         assert user.access_token == "test-token"
         assert user.claims == claims
@@ -190,7 +190,7 @@ class TestAuthenticatedUser:
         Test that the string representation redacts the token
         """
         claims = ZitadelClaims(**valid_zitadel_claims)
-        user = AuthenticatedUser(claims=claims, access_token="secret-token")
+        user = ZitadelUser(claims=claims, access_token="secret-token")
         str_rep = str(user)
         assert "secret-token" not in str_rep
         assert "***" in str_rep
@@ -211,7 +211,7 @@ class TestAuthenticatedUser:
         """
         claims = ZitadelClaims(**valid_zitadel_claims)
         setattr(claims, field, value)
-        user = AuthenticatedUser(claims=claims, access_token="token")
+        user = ZitadelUser(claims=claims, access_token="token")
         assert getattr(user.claims, field) == value
 
     def test_nested_metadata_access(self, valid_zitadel_claims):
@@ -219,6 +219,6 @@ class TestAuthenticatedUser:
         Test accessing nested metadata in claims
         """
         claims = ZitadelClaims(**valid_zitadel_claims)
-        user = AuthenticatedUser(claims=claims, access_token="token")
+        user = ZitadelUser(claims=claims, access_token="token")
         assert user.claims.user_metadata["department"] == "Engineering"
         assert user.claims.project_roles["system"] is True

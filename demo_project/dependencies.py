@@ -6,7 +6,7 @@ from fastapi import Depends
 
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
-from fastapi_zitadel_auth.user import ZitadelUser
+from fastapi_zitadel_auth.user import DefaultZitadelUser
 
 try:
     from demo_project.settings import get_settings
@@ -31,7 +31,9 @@ zitadel_auth = ZitadelAuth(
 )
 
 
-async def validate_is_system_user(user: ZitadelUser = Depends(zitadel_auth)) -> None:
+async def validate_is_system_user(
+    user: DefaultZitadelUser = Depends(zitadel_auth),
+) -> None:
     """
     Validate that the authenticated user is a user with the system role
     """

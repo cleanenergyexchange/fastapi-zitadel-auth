@@ -1,7 +1,19 @@
+from typing import (
+    TypeVar,
+    Generic,
+    Any,  # noqa
+)
+
 from pydantic import BaseModel, Field, model_validator
 
+# Generic type variables for claims and user models
+ClaimsT = TypeVar("ClaimsT", bound="BaseZitadelClaims")
+UserT = TypeVar("UserT", bound="BaseZitadelUser[Any]")
 
-class ZitadelClaims(BaseModel):
+
+class BaseZitadelClaims(BaseModel):
+    """Base model for standard JWT and OpenID claims"""
+
     # Standard JWT claims
     aud: str | list[str]
     exp: int
@@ -17,7 +29,21 @@ class ZitadelClaims(BaseModel):
     preferred_username: str | None = None
     name: str | None = None
 
-    # Zitadel-specific claims
+
+class BaseZitadelUser(BaseModel, Generic[ClaimsT]):
+    """Base authenticated user with claims and token"""
+
+    claims: ClaimsT
+    access_token: str
+
+    def __str__(self):
+        """Return user but redact token"""
+        return f"{self.__class__.__name__}({self.model_dump_json(exclude={'access_token'})})"
+
+
+class DefaultZitadelClaims(BaseZitadelClaims):
+    """Default Zitadel claims implementation with project roles"""
+
     project_roles: dict[str, dict[str, str]] = Field(
         default_factory=dict,
     )
@@ -35,12 +61,7 @@ class ZitadelClaims(BaseModel):
         return values
 
 
-class ZitadelUser(BaseModel):
-    """Authenticated user with claims and token"""
+class DefaultZitadelUser(BaseZitadelUser[DefaultZitadelClaims]):
+    """Default Zitadel user implementation"""
 
-    claims: ZitadelClaims
-    access_token: str
-
-    def __str__(self):
-        """Return user but redact token"""
-        return f"ZitadelUser({self.model_dump_json(exclude={'access_token'})})"
+    claims: DefaultZitadelClaims

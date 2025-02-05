@@ -32,6 +32,7 @@ including token validation, role-based access control, and Swagger UI integratio
 * Service user authentication (JWT Profile)
 * Swagger UI integration
 * Type-safe token validation
+* Extensible claims and user models
 
 
 > [!NOTE]
@@ -46,23 +47,28 @@ including token validation, role-based access control, and Swagger UI integratio
 pip install fastapi-zitadel-auth
 ```
 
+> [!TIP]
+> This library is in active development, so breaking changes can occur.
+> We recommend **pinning the version** until a stable release is available.
+
+
 ## Usage
 
 ### Configuration
 
 #### Zitadel
 
-Set up a project in Zitadel according to [docs/ZITADEL_SETUP.md](docs/ZITADEL_SETUP.md).
+Set up a project in Zitadel according to [docs/zitadel_setup.md](docs/zitadel_setup.md).
 
 #### FastAPI
 
 ```python
 from contextlib import asynccontextmanager
-from typing import Annotated
 
 from fastapi import FastAPI, Request, Security, Depends
 from pydantic import HttpUrl
-from fastapi_zitadel_auth import ZitadelAuth, ZitadelUser
+from fastapi_zitadel_auth import ZitadelAuth
+from fastapi_zitadel_auth.user import DefaultZitadelUser
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
 # Load OpenID configuration at startup
@@ -93,7 +99,7 @@ zitadel_auth = ZitadelAuth(
 )
 
 # Create a dependency to validate that the user has the required role
-async def validate_is_system_user(user: ZitadelUser = Depends(zitadel_auth)) -> None:
+async def validate_is_system_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
     required_role = "user"
     if required_role not in user.claims.project_roles.keys():
         raise InvalidAuthException(f"User does not have role assigned: {required_role}")
@@ -124,6 +130,8 @@ def private(request: Request):
     }
 
 ```
+
+If you need to customize the claims or user model, see [docs/custom_claims_and_users.md](docs/custom_claims_and_users.md).
 
 ## Demo app
 

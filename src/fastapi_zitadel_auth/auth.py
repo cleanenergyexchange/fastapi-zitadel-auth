@@ -3,7 +3,7 @@ Authentication module for Zitadel OAuth2
 """
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 from fastapi.exceptions import HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer, SecurityScopes
@@ -21,7 +21,7 @@ from pydantic import HttpUrl
 from starlette.requests import Request
 
 from .exceptions import InvalidAuthException
-from .user import ZitadelUser, ZitadelClaims
+from .user import ClaimsT, DefaultZitadelClaims, DefaultZitadelUser, UserT
 from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
@@ -43,6 +43,8 @@ class ZitadelAuth(SecurityBase):
         client_id: str,
         scopes: dict[str, str],
         leeway: float = 0,
+        claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
+        user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
     ) -> None:
         """
         Initialize the ZitadelAuth object
@@ -51,6 +53,9 @@ class ZitadelAuth(SecurityBase):
         self.project_id = project_id
         self.issuer = str(issuer).rstrip("/")
         self.leeway = leeway
+
+        self.claims_model = claims_model
+        self.user_model = user_model
 
         self.openid_config = OpenIdConfig(
             issuer=self.issuer,
@@ -74,7 +79,7 @@ class ZitadelAuth(SecurityBase):
 
     async def __call__(
         self, request: Request, security_scopes: SecurityScopes
-    ) -> ZitadelUser | None:
+    ) -> UserT | None:
         """
         Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
         """
@@ -115,11 +120,12 @@ class ZitadelAuth(SecurityBase):
                 leeway=self.leeway,
             )
 
-            # Create the authenticated user object and attach it to starlette.request.state
-            user: ZitadelUser = ZitadelUser(
-                claims=ZitadelClaims.model_validate(verified_claims),
+            # Create the user object
+            user: UserT = self.user_model(  # type: ignore
+                claims=self.claims_model.model_validate(verified_claims),
                 access_token=access_token,
             )
+            # Attach user to starlette.request.state
             request.state.user = user
             return user
 
