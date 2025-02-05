@@ -10,12 +10,13 @@ import uvicorn
 from fastapi import FastAPI, Request, Security
 from starlette.middleware.cors import CORSMiddleware
 
+
 try:
-    from demo_project.dependencies import zitadel_auth  # type: ignore[no-redef]
+    from demo_project.dependencies import zitadel_auth, validate_is_system_user  # type: ignore[no-redef]
     from demo_project.settings import get_settings  # type: ignore[no-redef]
 except ImportError:
     # ImportError handling since it's also used in tests
-    from dependencies import zitadel_auth  # type: ignore[no-redef]
+    from dependencies import zitadel_auth, validate_is_system_user  # type: ignore[no-redef]
     from settings import get_settings  # type: ignore[no-redef]
 
 settings = get_settings()
@@ -26,6 +27,14 @@ logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger.info(f"Settings: {settings.model_dump_json()}")
+
+ZITADEL_SCOPES = {
+    "openid": "Required for OpenID Connect",
+    "profile": "Access to user profile information",
+    "email": "Access to email information",
+    "urn:zitadel:iam:org:projects:roles": "Access to project roles",
+    "urn:zitadel:iam:org:project:id:zitadel:aud": "Zitadel project audience",
+}
 
 
 @asynccontextmanager
@@ -44,15 +53,7 @@ app = FastAPI(
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": settings.OAUTH_CLIENT_ID,
-        "scopes": " ".join(
-            [
-                "openid",
-                "email",
-                "profile",
-                "urn:zitadel:iam:org:project:id:zitadel:aud",
-                "urn:zitadel:iam:org:projects:roles",
-            ]
-        ),
+        "scopes": " ".join(ZITADEL_SCOPES.keys()),
     },
 )
 
@@ -73,15 +74,12 @@ def public():
 
 @app.get(
     "/api/private",
-    summary="Private endpoint, requiring a valid token with `system` scope",
-    dependencies=[Security(zitadel_auth, scopes=["user"])],
+    summary="Private endpoint",
+    dependencies=[Security(validate_is_system_user)],
 )
 def protected(request: Request):
-    logger.debug(f"User object: {request.state.user}")
-    logger.debug(f"User claims: {request.state.user.claims}")
-    logger.debug(f"User roles: {request.state.user.claims.project_roles}")
     return {
-        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.user_id}"
+        "message": f"Hello, protected world! Here is Zitadel user with id {request.state.user.claims.sub}"
     }
 
 

@@ -19,7 +19,7 @@ class OpenIdConfig(BaseModel):
     authorization_url: str
     token_url: str
     jwks_uri: str
-    signing_keys: dict[str, RSAPublicKey] | None = None
+    signing_keys: dict[str, RSAPublicKey] = {}
     last_refresh: datetime | None = None
 
     async def load_config(self) -> None:

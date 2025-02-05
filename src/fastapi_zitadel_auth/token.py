@@ -12,6 +12,28 @@ class TokenValidator:
     """Handles JWT token validation and parsing"""
 
     @staticmethod
+    def validate_scopes(
+        claims: dict[str, Any], required_scopes: list[str] | None
+    ) -> bool:
+        """
+        Validates that the token has the required scopes
+        """
+        if required_scopes is None:
+            return True
+
+        token_scopes = claims.get("scope", "").split()
+
+        # Check if all required scopes are present
+        for required_scope in required_scopes:
+            if required_scope not in token_scopes:
+                log.warning(
+                    f"Missing required scope: {required_scope}. "
+                    f"Available scopes: {token_scopes}"
+                )
+                raise InvalidAuthException(f"Missing required scope: {required_scope}")
+        return True
+
+    @staticmethod
     def parse_unverified(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
         """Parse header and claims without verification"""
         try:
@@ -20,32 +42,6 @@ class TokenValidator:
             return header, claims
         except Exception as e:
             raise InvalidAuthException("Invalid token format") from e
-
-    @staticmethod
-    def validate_scopes(
-        project_id: str, claims: dict[str, Any], required_scopes: list[str]
-    ) -> bool:
-        """
-        Validate the token scopes against the required scopes
-        """
-        permission_claim = f"urn:zitadel:iam:org:project:{project_id}:roles"
-
-        if permission_claim not in claims or not isinstance(
-            claims[permission_claim], dict
-        ):
-            log.warning(f"Missing or invalid roles in token claims: {permission_claim}")
-            raise InvalidAuthException(
-                f"Missing or invalid roles in token claims: {permission_claim}"
-            )
-
-        project_roles = claims[permission_claim]
-        for required_scope in required_scopes:
-            if required_scope not in project_roles:
-                log.warning(f"Token does not have required scope: {required_scope}")
-                raise InvalidAuthException(
-                    f"Token does not have required scope: {required_scope}"
-                )
-        return True
 
     @staticmethod
     def verify(

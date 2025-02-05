@@ -58,10 +58,19 @@ Set up a project in Zitadel according to [docs/ZITADEL_SETUP.md](docs/ZITADEL_SE
 
 ```python
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, Request, Security
+from fastapi import FastAPI, Request, Security, Depends
 from pydantic import HttpUrl
-from fastapi_zitadel_auth import ZitadelAuth
+from fastapi_zitadel_auth import ZitadelAuth, ZitadelUser
+from fastapi_zitadel_auth.exceptions import InvalidAuthException
+
+# Load OpenID configuration at startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa
+    await zitadel_auth.openid_config.load_config()
+    yield
+
 
 # define your Zitadel project ID, client ID and scopes
 CLIENT_ID = 'your-zitadel-client-id'
@@ -83,11 +92,11 @@ zitadel_auth = ZitadelAuth(
     scopes=SCOPES,
 )
 
-# Load OpenID configuration at startup
-@asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa
-    await zitadel_auth.openid_config.load_config()
-    yield
+# Create a dependency to validate that the user has the required role
+async def validate_is_system_user(user: ZitadelUser = Depends(zitadel_auth)) -> None:
+    required_role = "user"
+    if required_role not in user.claims.project_roles.keys():
+        raise InvalidAuthException(f"User does not have role assigned: {required_role}")
 
 
 # Create a FastAPI app and configure Swagger UI
@@ -103,11 +112,11 @@ app = FastAPI(
 )
 
 
-# Create an endpoint and protect it with the ZitadelAuth dependency
+# Create an endpoint and protect it with validate_is_system_user dependency
 @app.get(
     "/api/private",
-    summary="Private endpoint, requiring a valid token with `user` scope",
-    dependencies=[Security(zitadel_auth, scopes=["user"])],
+    summary="Private endpoint, requiring a valid token with 'user' role",
+    dependencies=[Security(validate_is_system_user)],
 )
 def private(request: Request):
     return {

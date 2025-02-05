@@ -21,7 +21,7 @@ from pydantic import HttpUrl
 from starlette.requests import Request
 
 from .exceptions import InvalidAuthException
-from .models import AuthenticatedUser, ZitadelClaims
+from .user import ZitadelUser, ZitadelClaims
 from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
@@ -38,7 +38,7 @@ class ZitadelAuth(SecurityBase):
 
     def __init__(
         self,
-        issuer: HttpUrl,
+        issuer: HttpUrl | str,
         project_id: str,
         client_id: str,
         scopes: dict[str, str],
@@ -74,7 +74,7 @@ class ZitadelAuth(SecurityBase):
 
     async def __call__(
         self, request: Request, security_scopes: SecurityScopes
-    ) -> AuthenticatedUser | None:
+    ) -> ZitadelUser | None:
         """
         Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
         """
@@ -87,14 +87,16 @@ class ZitadelAuth(SecurityBase):
 
             # Parse unverified header and claims
             header, claims = self.token_validator.parse_unverified(token=access_token)
-            log.debug("Header: %s", header)
-            log.debug("Claims: %s", claims)
+            log.debug("Unverified header: %s", header)
+            log.debug("Unverified claims: %s", claims)
             log.debug("Required scopes: %s", ",".join(security_scopes.scopes))
 
-            # Validate scopes
-            self.token_validator.validate_scopes(
-                self.project_id, claims, security_scopes.scopes
-            )
+            # Validate header
+            if header.get("alg") != "RS256":
+                raise InvalidAuthException("Invalid token algorithm")
+
+            # Validate scopes and roles
+            self.token_validator.validate_scopes(claims, security_scopes.scopes)
 
             # Load or refresh the openid config
             await self.openid_config.load_config()
@@ -114,7 +116,7 @@ class ZitadelAuth(SecurityBase):
             )
 
             # Create the authenticated user object and attach it to starlette.request.state
-            user = AuthenticatedUser(
+            user: ZitadelUser = ZitadelUser(
                 claims=ZitadelClaims.model_validate(verified_claims),
                 access_token=access_token,
             )
