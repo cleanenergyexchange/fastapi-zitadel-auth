@@ -24,6 +24,14 @@ def fastapi_app():
     yield
 
 
+@pytest.fixture(autouse=True)
+async def reset_openid_config():
+    """Reset the OpenID configuration before each test"""
+    zitadel_auth.openid_config.last_refresh = None
+    zitadel_auth.openid_config.signing_keys = {}
+    yield
+
+
 def openid_configuration() -> dict:
     """OpenID configuration fixture"""
     zitadel_host = "https://test-zitadel-xs2hs.zitadel.cloud"

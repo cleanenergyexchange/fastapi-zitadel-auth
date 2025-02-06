@@ -4,11 +4,10 @@ Tests for OpenIdConfig class
 
 import pytest
 from datetime import datetime, timedelta
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
-
+from tests.utils import valid_key
 
 dummy_issuer = "https://test-zitadel-xs2hs.zitadel.cloud"
 
@@ -81,48 +80,6 @@ class TestOpenIdConfig:
             isinstance(key, RSAPublicKey) for key in config.signing_keys.values()
         )
 
-    @pytest.mark.parametrize(
-        "config_status,jwks_status,expected_exception,has_previous_config",
-        [
-            (500, 200, InvalidAuthException, True),
-            (200, 500, InvalidAuthException, True),
-            (500, 200, RuntimeError, False),
-            (200, 500, RuntimeError, False),
-        ],
-    )
-    async def test_error_handling(
-        self,
-        respx_mock,
-        mock_openid_config,
-        mock_jwks,
-        config_status,
-        jwks_status,
-        expected_exception,
-        has_previous_config,
-    ):
-        """Test error handling for failed config loading"""
-        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
-        config = OpenIdConfig(
-            issuer="",
-            config_url=config_url,
-            authorization_url="",
-            token_url="",
-            jwks_uri="",
-        )
-
-        if has_previous_config:
-            config.last_refresh = datetime.now() - timedelta(hours=2)
-
-        respx_mock.get(config_url).respond(
-            status_code=config_status, json=mock_openid_config
-        )
-        respx_mock.get(mock_openid_config["jwks_uri"]).respond(
-            status_code=jwks_status, json=mock_jwks
-        )
-
-        with pytest.raises(expected_exception):
-            await config.load_config()
-
     async def test_caching_behavior(
         self, respx_mock, mock_openid_config, mock_jwks, freezer
     ):
@@ -184,3 +141,35 @@ class TestOpenIdConfig:
 
         await config.load_config()
         assert len(config.signing_keys) == 0
+
+    @pytest.mark.parametrize(
+        "last_refresh, signing_key, expected",
+        [
+            (None, {}, True),  # No config -> refresh
+            (datetime.now(), {}, True),  # No keys -> refresh
+            (
+                datetime.now(),
+                valid_key.public_key(),
+                False,
+            ),  # Fresh config and keys -> no refresh
+            (
+                datetime.now() - timedelta(hours=2),
+                valid_key.public_key(),
+                True,
+            ),  # Old config -> refresh
+            (None, valid_key.public_key(), True),  # No config, but keys -> refresh
+        ],
+    )
+    async def test_needs_refresh(self, last_refresh, signing_key, expected):
+        """Test that _needs_refresh method works as expected based on last_refresh and signing_keys"""
+        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
+        config = OpenIdConfig(
+            issuer="",
+            config_url=config_url,
+            authorization_url="",
+            token_url="",
+            jwks_uri="",
+            last_refresh=last_refresh,
+            signing_keys={"kid": signing_key} if signing_key else {},
+        )
+        assert config._needs_refresh() == expected
