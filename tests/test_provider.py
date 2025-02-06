@@ -1,3 +1,7 @@
+"""
+Test the provider configuration (Zitadel) fetching.
+"""
+
 import logging
 from datetime import datetime, timedelta
 

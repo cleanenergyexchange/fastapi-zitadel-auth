@@ -1,3 +1,7 @@
+"""
+Test the OpenAPI schema.
+"""
+
 import openapi_spec_validator
 
 from tests.utils import zitadel_issuer
