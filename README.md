@@ -74,13 +74,6 @@ from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import DefaultZitadelUser
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
-# Load OpenID configuration at startup
-@asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa
-    await zitadel_auth.openid_config.load_config()
-    yield
-
-
 # Define your Zitadel project ID, client ID
 CLIENT_ID = 'your-zitadel-client-id'
 PROJECT_ID = 'your-zitadel-project-id'
@@ -106,6 +99,13 @@ async def validate_is_admin_user(user: DefaultZitadelUser = Depends(zitadel_auth
         raise InvalidAuthException(f"User does not have role assigned: {required_role}")
 
 
+# Load OpenID configuration at startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa
+    await zitadel_auth.openid_config.load_config()
+    yield
+
+
 # Create a FastAPI app and configure Swagger UI
 app = FastAPI(
     title="fastapi-zitadel-auth demo",
@@ -127,23 +127,23 @@ app = FastAPI(
 )
 
 
-# Create an endpoint and require a user to be authenticated and have the admin role
+# Endpoint that requires a user to be authenticated and have the admin role
 @app.get(
     "/api/protected/admin",
-    summary="Private endpoint, requires admin role",
-    dependencies=[Security(validate_is_admin_user)],  # Inject our custom dependency
+    summary="Protected endpoint, requires admin role",
+    dependencies=[Security(validate_is_admin_user)],
 )
 def protected_for_admin(request: Request):
-    """Protected endpoint"""
+    """Protected endpoint, requires admin role"""
     user = request.state.user
     return {"message": "Hello world!", "user": user}
 
 
-# Create an endpoint and require a user to be authenticated with a specific scope
+# Endpoint that requires a user to be authenticated
 @app.get(
     "/api/protected/scope",
-    summary="Private endpoint, requires a specific scope",
-    dependencies=[Security(zitadel_auth, scopes=["scope1"])],  # Inject the ZitadelAuth dependency with required scope
+    summary="Protected endpoint, requires a specific scope",
+    dependencies=[Security(zitadel_auth, scopes=["scope1"])],
 )
 def protected_by_scope(request: Request):
     """Protected endpoint, requires a specific scope"""
@@ -156,7 +156,9 @@ If you need to customize the claims or user model, see [docs/custom_claims_and_u
 
 ## Demo app
 
-See `demo_project` for a complete example, including service user login. To run the demo app:
+See `demo_project` for a complete example, including service user login. 
+
+To run the demo app:
 
 ```bash
 uv run demo_project/main.py
