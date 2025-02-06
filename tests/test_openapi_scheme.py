@@ -8,7 +8,7 @@ from tests.utils import zitadel_issuer
 
 openapi_schema = {
     "openapi": "3.1.0",
-    "info": {"title": "fastapi-zitadel-auth demo", "version": "0.1.0"},
+    "info": {"title": "fastapi-zitadel-auth demo", "version": "0.2.0"},
     "paths": {
         "/api/public": {
             "get": {
@@ -25,7 +25,7 @@ openapi_schema = {
         },
         "/api/protected/admin": {
             "get": {
-                "summary": "Private endpoint, requires admin role",
+                "summary": "Protected endpoint, requires admin role",
                 "description": "Protected endpoint",
                 "operationId": "protected_for_admin_api_protected_admin_get",
                 "responses": {
@@ -39,7 +39,7 @@ openapi_schema = {
         },
         "/api/protected/scope": {
             "get": {
-                "summary": "Private endpoint, requires a specific scope",
+                "summary": "Protected endpoint, requires a specific scope",
                 "description": "Protected endpoint, requires a specific scope",
                 "operationId": "protected_by_scope_api_protected_scope_get",
                 "responses": {
