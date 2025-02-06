@@ -75,7 +75,6 @@ class OpenIdConfig(BaseModel):
 
     def _load_keys(self, keys: list[dict[str, str]]) -> None:
         """Load signing keys from JWKS response"""
-        log.debug("Loading signing keys: %s", ", ".join([key["kid"] for key in keys]))
         self.signing_keys = {
             key["kid"]: PyJWK(key, "RS256").key
             for key in keys
