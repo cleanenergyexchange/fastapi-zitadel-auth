@@ -1,0 +1,75 @@
+import logging
+from datetime import datetime, timedelta
+
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from jwt import PyJWK
+from httpx import AsyncClient
+from pydantic import BaseModel, ConfigDict
+
+from fastapi_zitadel_auth.exceptions import InvalidAuthException
+
+log = logging.getLogger("fastapi_zitadel_auth")
+
+
+class OpenIdConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, strict=True, extra="forbid")
+
+    issuer: str
+    config_url: str
+    authorization_url: str
+    token_url: str
+    jwks_uri: str
+    signing_keys: dict[str, RSAPublicKey] = {}
+    last_refresh: datetime | None = None
+
+    async def load_config(self) -> None:
+        """
+        Refresh the OpenID Connect configuration if needed
+        """
+        if self._needs_refresh():
+            try:
+                log.debug("Refreshing OpenID config and signing keys")
+                await self._refresh()
+                self.last_refresh = datetime.now()
+            except Exception as error:
+                raise InvalidAuthException(
+                    "Connection to Zitadel is down. Unable to fetch provider configuration"
+                ) from error
+
+    def _needs_refresh(self) -> bool:
+        """Check if config needs refresh"""
+        if not self.last_refresh or not self.signing_keys:
+            return True
+        refresh_time = datetime.now() - timedelta(hours=1)
+        return self.last_refresh < refresh_time
+
+    async def _refresh(self) -> None:
+        """Fetch both OpenID config and signing keys"""
+        async with AsyncClient(timeout=10) as client:
+            # Fetch OpenID config
+            openid_response = await client.get(self.config_url)
+            openid_response.raise_for_status()
+            config = openid_response.json()
+
+            # Update config values
+            self.issuer = config["issuer"]
+            self.authorization_url = config["authorization_endpoint"]
+            self.token_url = config["token_endpoint"]
+            self.jwks_uri = config["jwks_uri"]
+
+            # Fetch and load signing keys
+            jwks_response = await client.get(self.jwks_uri)
+            jwks_response.raise_for_status()
+            self._load_keys(jwks_response.json().get("keys", []))
+            log.info("Refreshed OpenID config and signing keys from Zitadel")
+
+    def _load_keys(self, keys: list[dict[str, str]]) -> None:
+        """Load signing keys from JWKS response"""
+        self.signing_keys = {
+            key["kid"]: PyJWK(key, "RS256").key
+            for key in keys
+            if key.get("use") == "sig"
+            and key.get("alg") == "RS256"
+            and key.get("kty") == "RSA"
+            and "kid" in key
+        }

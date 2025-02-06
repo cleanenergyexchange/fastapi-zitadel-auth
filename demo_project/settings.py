@@ -4,12 +4,12 @@ Settings for the demo project
 
 from functools import lru_cache
 
-from pydantic import AnyHttpUrl
+from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    ZITADEL_HOST: AnyHttpUrl
+    ZITADEL_HOST: HttpUrl
     ZITADEL_PROJECT_ID: str
     OAUTH_CLIENT_ID: str
 

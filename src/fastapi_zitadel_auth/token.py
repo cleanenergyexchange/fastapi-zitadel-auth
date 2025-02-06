@@ -1,15 +1,42 @@
+import logging
 from typing import Any
 
 import jwt
 
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
+log = logging.getLogger("fastapi_zitadel_auth")
+
 
 class TokenValidator:
     """Handles JWT token validation and parsing"""
 
-    def __init__(self, algorithm: str = "RS256"):
-        self.algorithm = algorithm
+    @staticmethod
+    def validate_scopes(
+        claims: dict[str, Any], required_scopes: list[str] | None
+    ) -> bool:
+        """
+        Validates that the token has the required scopes
+        """
+        if required_scopes is None:
+            return True
+
+        # Check if the token has the scope field and it is a string
+        token_scope_str = claims.get("scope", "")
+        if not isinstance(token_scope_str, str):
+            log.warning("Invalid scope format: %s", token_scope_str)
+            raise InvalidAuthException("Token contains invalid formatted scopes")
+        token_scopes = token_scope_str.split()
+
+        # Check if all required scopes are present
+        for required_scope in required_scopes:
+            if required_scope not in token_scopes:
+                log.warning(
+                    f"Missing required scope: {required_scope}. "
+                    f"Available scopes: {token_scopes}"
+                )
+                raise InvalidAuthException(f"Missing required scope: {required_scope}")
+        return True
 
     @staticmethod
     def parse_unverified(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -21,8 +48,13 @@ class TokenValidator:
         except Exception as e:
             raise InvalidAuthException("Invalid token format") from e
 
+    @staticmethod
     def verify(
-        self, token: str, key: Any, audiences: list[str], issuer: str
+        token: str,
+        key: Any,
+        audiences: list[str],
+        issuer: str,
+        leeway: float = 0,
     ) -> dict[str, Any]:
         """Verify token signature and claims"""
         options = {
@@ -32,14 +64,14 @@ class TokenValidator:
             "verify_exp": True,
             "verify_nbf": True,
             "verify_iss": True,
-            "require": ["exp", "aud", "iat", "nbf", "sub"],
-            "leeway": 0,
+            "require": ["exp", "aud", "iat", "nbf", "sub", "iss"],
         }
         return jwt.decode(
             token,
             key=key,
-            algorithms=[self.algorithm],
+            algorithms=["RS256"],
             audience=audiences,
             issuer=issuer,
+            leeway=leeway,
             options=options,
         )

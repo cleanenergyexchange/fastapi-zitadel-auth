@@ -8,6 +8,8 @@ To contribute, follow these steps:
 4. Install pre-commit hooks with `uv run pre-commit install`.
 5. Create a branch for your feature or fix.
 6. Write code.
-7. Write and run tests: `uv run pytest`
-8. Create a pull request.
-9. Link the issue in the pull request.
+7. Format code with `uv run format src`.
+8. Lint code with `uv run check --fix src`.
+9. Write and run tests: `uv run pytest`
+10. Create a pull request.
+11. Link the issue in the pull request.
