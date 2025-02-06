@@ -44,6 +44,7 @@ def valid_token(rsa_keys) -> str:
         "exp": now + 3600,
         "iat": now,
         "nbf": now,
+        "jti": "unique-token-id",
     }
 
     pem = private_key.private_bytes(
@@ -145,6 +146,10 @@ class TestTokenValidator:
         assert claims["sub"] == "user123"
         assert "exp" in claims
         assert "iat" in claims
+        assert "iss" in claims
+        assert "aud" in claims
+        assert "nbf" in claims
+        assert "jti" in claims
 
     def test_parse_unverified_none_token(self, token_validator):
         """Test that the TokenValidator raises an exception when parsing a None token"""
@@ -202,6 +207,7 @@ class TestTokenValidator:
             "exp": now - 3600,  # Expired 1 hour ago
             "iat": now - 7200,
             "nbf": now - 7200,
+            "jti": "unique-token-id",
         }
 
         pem = private_key.private_bytes(
@@ -270,6 +276,7 @@ class TestTokenValidator:
             "exp": now + 7200,
             "iat": now,
             "nbf": now + 3600,  # Not valid for another hour
+            "jti": "unique-token-id",
         }
 
         pem = private_key.private_bytes(
