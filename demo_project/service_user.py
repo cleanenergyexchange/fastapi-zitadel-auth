@@ -1,5 +1,5 @@
 """
-This module demonstrates how to authenticate a service account with Zitadel.
+This module demonstrates how to authenticate a service user with Zitadel.
 """
 
 import asyncio
@@ -47,6 +47,9 @@ jwt_token = pyjwt.encode(payload, private_key, algorithm="RS256", headers=header
 
 
 async def main():
+    """
+    Authenticate a service user with Zitadel and make an API call to a protected endpoint.
+    """
     # Creating an asynchronous HTTP client context
     async with AsyncClient() as client:
         # Data payload for the OAuth2 token request
@@ -75,7 +78,7 @@ async def main():
 
         # Example API call using the acquired access token
         my_api_response = await client.get(
-            "http://localhost:8001/api/private",
+            "http://localhost:8001/api/protected/admin",
             headers={"Authorization": f"Bearer {access_token}"},
         )
         if my_api_response.status_code == 200:

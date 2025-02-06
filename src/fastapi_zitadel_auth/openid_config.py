@@ -28,13 +28,22 @@ class OpenIdConfig(BaseModel):
         """
         if self._needs_refresh():
             try:
-                log.debug("Refreshing OpenID config and signing keys")
+                log.info("Refreshing OpenID config and signing keys")
                 await self._refresh()
                 self.last_refresh = datetime.now()
             except Exception as error:
+                log.error("Error fetching OpenID config: %s", error)
                 raise InvalidAuthException(
                     "Connection to Zitadel is down. Unable to fetch provider configuration"
                 ) from error
+
+            log.info("Loaded OpenID configuration from Zitadel.")
+            log.info("Issuer:               %s", self.issuer)
+            log.info("Authorization url:    %s", self.authorization_url)
+            log.info("Token url:            %s", self.token_url)
+            log.debug("Keys url:            %s", self.jwks_uri)
+            log.debug("Last refresh:        %s", self.last_refresh)
+            log.debug("Signing keys:        %s", len(self.signing_keys))
 
     def _needs_refresh(self) -> bool:
         """Check if config needs refresh"""
@@ -47,6 +56,7 @@ class OpenIdConfig(BaseModel):
         """Fetch both OpenID config and signing keys"""
         async with AsyncClient(timeout=10) as client:
             # Fetch OpenID config
+            log.debug("Fetching OpenID config from %s", self.config_url)
             openid_response = await client.get(self.config_url)
             openid_response.raise_for_status()
             config = openid_response.json()
@@ -58,10 +68,10 @@ class OpenIdConfig(BaseModel):
             self.jwks_uri = config["jwks_uri"]
 
             # Fetch and load signing keys
+            log.debug("Fetching JWKS keys from %s", self.jwks_uri)
             jwks_response = await client.get(self.jwks_uri)
             jwks_response.raise_for_status()
             self._load_keys(jwks_response.json().get("keys", []))
-            log.info("Refreshed OpenID config and signing keys from Zitadel")
 
     def _load_keys(self, keys: list[dict[str, str]]) -> None:
         """Load signing keys from JWKS response"""

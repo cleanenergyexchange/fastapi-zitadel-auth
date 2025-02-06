@@ -10,6 +10,8 @@ import uvicorn
 from fastapi import FastAPI, Request, Security
 from starlette.middleware.cors import CORSMiddleware
 
+from fastapi_zitadel_auth import __version__
+
 
 try:
     from demo_project.dependencies import zitadel_auth, validate_is_admin_user  # type: ignore[no-redef]
@@ -41,6 +43,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="fastapi-zitadel-auth demo",
     lifespan=lifespan,
+    version=__version__,
     swagger_ui_oauth2_redirect_url="/oauth2-redirect",
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
@@ -75,7 +78,7 @@ def public():
 
 @app.get(
     "/api/protected/admin",
-    summary="Private endpoint, requires admin role",
+    summary="Protected endpoint, requires admin role",
     dependencies=[Security(validate_is_admin_user)],
 )
 def protected_for_admin(request: Request):
@@ -86,7 +89,7 @@ def protected_for_admin(request: Request):
 
 @app.get(
     "/api/protected/scope",
-    summary="Private endpoint, requires a specific scope",
+    summary="Protected endpoint, requires a specific scope",
     dependencies=[Security(zitadel_auth, scopes=["scope1"])],
 )
 def protected_by_scope(request: Request):

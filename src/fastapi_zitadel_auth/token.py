@@ -59,12 +59,14 @@ class TokenValidator:
         """Verify token signature and claims"""
         options = {
             "verify_signature": True,
-            "verify_aud": True,
-            "verify_iat": True,
             "verify_exp": True,
             "verify_nbf": True,
+            "verify_iat": True,
+            "verify_aud": True,
             "verify_iss": True,
-            "require": ["exp", "aud", "iat", "nbf", "sub", "iss"],
+            "verify_sub": True,
+            "verify_jti": True,
+            "require": ["exp", "aud", "iat", "nbf", "sub", "iss", "jti"],
         }
         return jwt.decode(
             token,

@@ -55,6 +55,7 @@ async def test_admin_user(fastapi_app, mock_openid_and_keys):
 
 
 async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
+    """Test that if no signing keys are found, the token cannot be decoded."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -68,6 +69,7 @@ async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
 
 
 async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
+    """Test that a user without the admin role is rejected from the admin endpoint."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -79,6 +81,7 @@ async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
 
 
 async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
+    """Test that a token with an invalid issuer is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -93,6 +96,7 @@ async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
 
 
 async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
+    """Test that a token with an invalid audience is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -107,6 +111,7 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
 
 
 async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_keys):
+    """Test that if no valid keys are found, the token cannot be decoded."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -119,6 +124,7 @@ async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_key
 
 
 async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
+    """Test that a token without the required scopes is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -133,6 +139,7 @@ async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
 
 
 async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
+    """Test that a token with invalid scope format is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -146,6 +153,7 @@ async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
 
 
 async def test_expired_token(fastapi_app, mock_openid_and_keys):
+    """Test that an expired token is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -157,6 +165,7 @@ async def test_expired_token(fastapi_app, mock_openid_and_keys):
 
 
 async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
+    """Test that a token signed with an 'evil' key is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -170,6 +179,7 @@ async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
 
 
 async def test_malformed_token(fastapi_app, mock_openid_and_keys):
+    """Test that a malformed token is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -181,6 +191,7 @@ async def test_malformed_token(fastapi_app, mock_openid_and_keys):
 
 
 async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that when no token is available in the request, it is rejected."""
     mocker.patch.object(ZitadelAuth, "_extract_access_token", return_value=None)
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -192,6 +203,7 @@ async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
 
 
 async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
+    """Test that a token header with an invalid algorithm is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -202,6 +214,7 @@ async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
 
 
 async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
+    """Test that a token header with an invalid type is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -212,6 +225,7 @@ async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
 
 
 async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that an exception during token verification is handled."""
     mocker.patch.object(TokenValidator, "verify", side_effect=ValueError("oops"))
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -225,11 +239,7 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
 @pytest.mark.anyio
 async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, freezer):
     """
-    * Do a successful request.
-    * Set time to 25 hours later, so that a new OpenAPI config has to be fetched
-    * Ensure new keys returned is an empty list, so the next request shouldn't work.
-    * Generate a new, valid token
-    * Do request
+    Test that the keys are fetched again if the current keys are outdated.
     """
     async with AsyncClient(
         transport=ASGITransport(app=app),
