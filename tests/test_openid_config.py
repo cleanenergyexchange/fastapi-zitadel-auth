@@ -7,19 +7,17 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
-from tests.utils import valid_key
-
-dummy_issuer = "https://test-zitadel-xs2hs.zitadel.cloud"
+from tests.utils import valid_key, zitadel_issuer, openid_config_url
 
 
 @pytest.fixture
 def mock_openid_config():
     """Fixture providing mock OpenID configuration data."""
     return {
-        "issuer": dummy_issuer,
-        "authorization_endpoint": f"{dummy_issuer}/oauth/v2/authorize",
-        "token_endpoint": f"{dummy_issuer}/oauth/v2/token",
-        "jwks_uri": f"{dummy_issuer}/oauth/v2/keys",
+        "issuer": zitadel_issuer(),
+        "authorization_endpoint": f"{zitadel_issuer()}/oauth/v2/authorize",
+        "token_endpoint": f"{zitadel_issuer()}/oauth/v2/token",
+        "jwks_uri": f"{zitadel_issuer()}/oauth/v2/keys",
     }
 
 
@@ -57,7 +55,7 @@ class TestOpenIdConfig:
         self, respx_mock, mock_openid_config, mock_jwks
     ):
         """Test that OpenIdConfig loads config and keys correctly"""
-        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
+        config_url = openid_config_url()
         config = OpenIdConfig(
             issuer="",
             config_url=config_url,
@@ -84,7 +82,7 @@ class TestOpenIdConfig:
         self, respx_mock, mock_openid_config, mock_jwks, freezer
     ):
         """Test that config is cached and only refreshed after expiry"""
-        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
+        config_url = openid_config_url()
         config = OpenIdConfig(
             issuer="",
             config_url=config_url,
@@ -113,7 +111,7 @@ class TestOpenIdConfig:
 
     async def test_key_filtering(self, respx_mock, mock_openid_config):
         """Test that invalid keys are filtered out"""
-        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
+        config_url = openid_config_url()
         config = OpenIdConfig(
             issuer="",
             config_url=config_url,
@@ -162,7 +160,7 @@ class TestOpenIdConfig:
     )
     async def test_needs_refresh(self, last_refresh, signing_key, expected):
         """Test that _needs_refresh method works as expected based on last_refresh and signing_keys"""
-        config_url = f"{dummy_issuer}/.well-known/openid-configuration"
+        config_url = openid_config_url()
         config = OpenIdConfig(
             issuer="",
             config_url=config_url,

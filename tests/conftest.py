@@ -2,20 +2,24 @@
 Pytest conftest.py file to define fixtures available to all tests
 """
 
+from typing import Iterator
+
 import httpx
 import pytest
+from blockbuster import blockbuster_ctx, BlockBuster
+from starlette.testclient import TestClient
 
 from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
-from tests.utils import create_openid_keys
+from tests.utils import create_openid_keys, zitadel_issuer, openid_config_url, keys_url
 
 
 @pytest.fixture
 def fastapi_app():
     """FastAPI app fixture"""
     zitadel_auth_overrides = ZitadelAuth(
-        issuer="https://test-zitadel-xs2hs.zitadel.cloud",
+        issuer=zitadel_issuer(),
         client_id="123456789",
         project_id="987654321",
         scopes={"scope1": "Some scope"},
@@ -32,9 +36,16 @@ async def reset_openid_config():
     yield
 
 
+@pytest.fixture(autouse=True)
+def blockbuster() -> Iterator[BlockBuster]:
+    """Detect blocking calls within an asynchronous event loop"""
+    with blockbuster_ctx() as bb:
+        yield bb
+
+
 def openid_configuration() -> dict:
     """OpenID configuration fixture"""
-    zitadel_host = "https://test-zitadel-xs2hs.zitadel.cloud"
+    zitadel_host = zitadel_issuer()
     return {
         "issuer": zitadel_host,
         "authorization_endpoint": f"{zitadel_host}/oauth/v2/authorize",
@@ -137,16 +148,6 @@ def openid_configuration() -> dict:
     }
 
 
-def openid_config_url() -> str:
-    """OpenID configuration URL fixture"""
-    return "https://test-zitadel-xs2hs.zitadel.cloud/.well-known/openid-configuration"
-
-
-def keys_url() -> str:
-    """OpenID keys URL fixture"""
-    return "https://test-zitadel-xs2hs.zitadel.cloud/oauth/v2/keys"
-
-
 @pytest.fixture
 def mock_openid(respx_mock):
     """Fixture to mock OpenID configuration"""
@@ -189,3 +190,9 @@ def mock_openid_and_no_valid_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and keys with no valid keys"""
     respx_mock.get(keys_url()).respond(json=create_openid_keys(no_valid_keys=True))
     yield
+
+
+@pytest.fixture
+def public_client():
+    """Test client that does not run startup event."""
+    yield TestClient(app=app)

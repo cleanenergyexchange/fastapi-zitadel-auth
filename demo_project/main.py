@@ -70,7 +70,7 @@ app.add_middleware(
 @app.get("/api/public", summary="Public endpoint")
 def public():
     """Public endpoint"""
-    return {"message": "Hello, public world!"}
+    return {"message": "Hello world!"}
 
 
 @app.get(

@@ -12,10 +12,10 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
+from tests.utils import zitadel_issuer, zitadel_primary_domain
 
-primary_domain = "client1.region1.zitadel.cloud"
 client_id = "client1"
-project_id = "11111111111111"
+project_id = "123456789"
 role_key = "role1"
 role_id = "295621089671959405"
 sub = "22222222222222222222"
@@ -30,7 +30,7 @@ def valid_claims_data() -> dict:
         "client_id": client_id,
         "exp": now + 3600,
         "iat": now,
-        "iss": "https://instance01.region.zitadel.cloud",
+        "iss": zitadel_issuer(),
         "sub": sub,
         "nbf": now,
         "jti": "unique-token-id",
@@ -42,7 +42,7 @@ def valid_claims_with_project_roles(valid_claims_data):
     """Fixture providing claims data with Zitadel project roles."""
     data = valid_claims_data.copy()
     data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {
-        role_key: {role_id: primary_domain}
+        role_key: {role_id: zitadel_primary_domain()}
     }
     return data
 
@@ -88,7 +88,7 @@ class TestDefaultZitadelClaims:
     def test_project_roles_extraction(self, valid_claims_with_project_roles):
         """Test extraction of project roles from Zitadel-specific claim."""
         claims = DefaultZitadelClaims(**valid_claims_with_project_roles)
-        assert claims.project_roles == {role_key: {role_id: primary_domain}}
+        assert claims.project_roles == {role_key: {role_id: zitadel_primary_domain()}}
 
     def test_missing_project_roles(self, valid_claims_data):
         """Test handling of missing project roles."""
@@ -99,11 +99,13 @@ class TestDefaultZitadelClaims:
         """Test extraction of project roles with different role values."""
         data = valid_claims_data.copy()
         data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {
-            "role2": {"123456789": primary_domain}
+            "role2": {"123456789": zitadel_primary_domain()}
         }
 
         claims = DefaultZitadelClaims(**data)
-        assert claims.project_roles == {"role2": {"123456789": primary_domain}}
+        assert claims.project_roles == {
+            "role2": {"123456789": zitadel_primary_domain()}
+        }
 
 
 class TestDefaultZitadelUser:

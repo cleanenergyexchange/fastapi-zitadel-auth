@@ -10,6 +10,16 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 
+def zitadel_issuer() -> str:
+    """Zitadel issuer URL used for tests"""
+    return "https://test-fza01.zitadel.cloud"
+
+
+def zitadel_primary_domain() -> str:
+    """Zitadel primary domain used for tests"""
+    return "client-fza.region.zitadel.cloud"
+
+
 def create_test_token(
     kid: str = "test-key-1",
     expired: bool = False,
@@ -30,9 +40,7 @@ def create_test_token(
         if expired
         else int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
-        "iss": "wrong-issuer"
-        if invalid_iss
-        else "https://test-zitadel-xs2hs.zitadel.cloud",
+        "iss": "wrong-issuer" if invalid_iss else zitadel_issuer(),
         "sub": "user123",
         "nbf": int(now.timestamp()),
         "jti": "unique-token-id",
@@ -41,7 +49,7 @@ def create_test_token(
 
     if role:
         claims["urn:zitadel:iam:org:project:987654321:roles"] = {
-            role: {"role_id": "client1.region1.zitadel.cloud"}
+            role: {"role_id": zitadel_primary_domain()}
         }
 
     # For evil token use the evil key but claim it's from the valid key
@@ -100,3 +108,13 @@ valid_key = rsa.generate_private_key(
 evil_key = rsa.generate_private_key(
     backend=default_backend(), public_exponent=65537, key_size=2048
 )
+
+
+def openid_config_url() -> str:
+    """OpenID configuration URL fixture"""
+    return f"{zitadel_issuer()}/.well-known/openid-configuration"
+
+
+def keys_url() -> str:
+    """OpenID keys URL fixture"""
+    return f"{zitadel_issuer()}/oauth/v2/keys"

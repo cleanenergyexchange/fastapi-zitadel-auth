@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.token import TokenValidator
-from tests.utils import create_test_token
+from tests.utils import create_test_token, zitadel_primary_domain, zitadel_issuer
 
 
 @pytest.mark.asyncio
@@ -40,12 +40,12 @@ async def test_admin_user(fastapi_app, mock_openid_and_keys):
                     "client_id": "123456789",
                     "exp": expires,
                     "iat": issued_at,
-                    "iss": "https://test-zitadel-xs2hs.zitadel.cloud",
+                    "iss": zitadel_issuer(),
                     "jti": "unique-token-id",
                     "nbf": issued_at,
                     "project_roles": {
                         "admin": {
-                            "role_id": "client1.region1.zitadel.cloud",
+                            "role_id": zitadel_primary_domain(),
                         },
                     },
                     "sub": "user123",

@@ -5,8 +5,7 @@ from httpx import AsyncClient, ASGITransport
 
 from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
-from tests.conftest import openid_config_url
-from tests.utils import create_test_token, create_openid_keys
+from tests.utils import create_test_token, create_openid_keys, openid_config_url
 
 log = logging.getLogger(__name__)
 
