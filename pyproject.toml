@@ -32,7 +32,10 @@ classifiers = [
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
     'Topic :: Software Development',
     'Topic :: Software Development :: Libraries',
     'Topic :: Software Development :: Libraries :: Application Frameworks',
@@ -51,6 +54,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "pytest-dotenv>=0.5.2",
+    "pytest-freezer>=0.4.9",
     "pytest-mock>=3.14.0",
     "pytest>=8.3.4",
     "respx>=0.21.1",
@@ -59,7 +63,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-v -x --cov=src --cov-report=term-missing:skip-covered"
+addopts = "-v --cov=src --cov=tests --cov-report=term-missing --cov-fail-under=100"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+console_output_style = "classic"
 env_files = ["tests/.env.test"]

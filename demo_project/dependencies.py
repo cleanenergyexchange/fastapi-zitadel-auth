@@ -31,12 +31,10 @@ zitadel_auth = ZitadelAuth(
 )
 
 
-async def validate_is_system_user(
+async def validate_is_admin_user(
     user: DefaultZitadelUser = Depends(zitadel_auth),
 ) -> None:
-    """
-    Validate that the authenticated user is a user with the system role
-    """
-    required_role = "system"
+    """Validate that the authenticated user is a user with a specific role"""
+    required_role = "admin"
     if required_role not in user.claims.project_roles.keys():
         raise InvalidAuthException(f"User does not have role assigned: {required_role}")

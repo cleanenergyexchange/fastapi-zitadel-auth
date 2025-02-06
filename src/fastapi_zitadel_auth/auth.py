@@ -94,22 +94,28 @@ class ZitadelAuth(SecurityBase):
             header, claims = self.token_validator.parse_unverified(token=access_token)
             log.debug("Unverified header: %s", header)
             log.debug("Unverified claims: %s", claims)
-            log.debug("Required scopes: %s", ",".join(security_scopes.scopes))
 
             # Validate header
             if header.get("alg") != "RS256":
-                raise InvalidAuthException("Invalid token algorithm")
+                raise InvalidAuthException("Unsupported token algorithm")
+            if header.get("typ") != "JWT":
+                raise InvalidAuthException("Unsupported token type")
 
-            # Validate scopes and roles
+            log.debug("Required scopes: '%s'", security_scopes.scope_str)
+            # Validate scopes
             self.token_validator.validate_scopes(claims, security_scopes.scopes)
 
             # Load or refresh the openid config
             await self.openid_config.load_config()
 
             # Get the JWKS key for the token
+            log.debug("Token header kid: %s", header.get("kid", ""))
             key = self.openid_config.signing_keys.get(header.get("kid", ""))
+            log.debug("Public key: %s", key)
             if key is None:
-                raise InvalidAuthException("No valid signing key found")
+                raise InvalidAuthException(
+                    "Unable to verify token, no signing keys found"
+                )
 
             # Verify the token with the public key
             verified_claims = self.token_validator.verify(

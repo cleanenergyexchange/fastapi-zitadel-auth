@@ -21,7 +21,12 @@ class TokenValidator:
         if required_scopes is None:
             return True
 
-        token_scopes = claims.get("scope", "").split()
+        # Check if the token has the scope field and it is a string
+        token_scope_str = claims.get("scope", "")
+        if not isinstance(token_scope_str, str):
+            log.warning("Invalid scope format: %s", token_scope_str)
+            raise InvalidAuthException("Token contains invalid formatted scopes")
+        token_scopes = token_scope_str.split()
 
         # Check if all required scopes are present
         for required_scope in required_scopes:

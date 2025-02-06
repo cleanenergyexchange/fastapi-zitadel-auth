@@ -19,6 +19,9 @@ including token validation, role-based access control, and Swagger UI integratio
 <a href="https://python.org">
     <img src="https://img.shields.io/badge/python-v3.10+-blue.svg?logo=python&logoColor=white&label=python" alt="Python versions">
 </a>
+<a href="https://mypy-lang.org">
+    <img src="https://www.mypy-lang.org/static/mypy_badge.svg" alt="mypy">
+</a>
 <a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENSE">
     <img src="https://badgen.net/github/license/cleanenergyexchange/fastapi-zitadel-auth/" alt="License"/>
 </a>
@@ -78,29 +81,27 @@ async def lifespan(app: FastAPI):  # noqa
     yield
 
 
-# define your Zitadel project ID, client ID and scopes
+# Define your Zitadel project ID, client ID
 CLIENT_ID = 'your-zitadel-client-id'
 PROJECT_ID = 'your-zitadel-project-id'
-SCOPES = {
-    "openid": "OpenID Connect",
-    "email": "Email",
-    "profile": "Profile",
-    "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
-    "urn:zitadel:iam:org:projects:roles": "Roles",
-}
-
 
 # Create a ZitadelAuth object usable as a FastAPI dependency
 zitadel_auth = ZitadelAuth(
     issuer=HttpUrl('https://your-instance-xyz.zitadel.cloud'),
     project_id=PROJECT_ID,
     client_id=CLIENT_ID,
-    scopes=SCOPES,
+    scopes={
+        "openid": "OpenID Connect",
+        "email": "Email",
+        "profile": "Profile",
+        "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
+        "urn:zitadel:iam:org:projects:roles": "Roles",
+    }
 )
 
 # Create a dependency to validate that the user has the required role
-async def validate_is_system_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
-    required_role = "user"
+async def validate_is_admin_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
+    required_role = "admin"
     if required_role not in user.claims.project_roles.keys():
         raise InvalidAuthException(f"User does not have role assigned: {required_role}")
 
@@ -113,21 +114,41 @@ app = FastAPI(
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": CLIENT_ID,
-        "scopes": list(SCOPES.keys()),
+        "scopes": " ".join(  # defining the pre-selected scope ticks in the Swagger UI
+                [
+                    "openid",
+                    "profile",
+                    "email",
+                    "urn:zitadel:iam:org:projects:roles",
+                    "urn:zitadel:iam:org:project:id:zitadel:aud",
+                ]
+        ),
     },
 )
 
 
-# Create an endpoint and protect it with validate_is_system_user dependency
+# Create an endpoint and require a user to be authenticated and have the admin role
 @app.get(
-    "/api/private",
-    summary="Private endpoint, requiring a valid token with 'user' role",
-    dependencies=[Security(validate_is_system_user)],
+    "/api/protected/admin",
+    summary="Private endpoint, requires admin role",
+    dependencies=[Security(validate_is_admin_user)],  # Inject our custom dependency
 )
-def private(request: Request):
-    return {
-        "message": f"Hello, protected world! Here is Zitadel user {request.state.user.user_id}"
-    }
+def protected_for_admin(request: Request):
+    """Protected endpoint"""
+    user = request.state.user
+    return {"message": "Hello world!", "user": user}
+
+
+# Create an endpoint and require a user to be authenticated with a specific scope
+@app.get(
+    "/api/protected/scope",
+    summary="Private endpoint, requires a specific scope",
+    dependencies=[Security(zitadel_auth, scopes=["scope1"])],  # Inject the ZitadelAuth dependency with required scope
+)
+def protected_by_scope(request: Request):
+    """Protected endpoint, requires a specific scope"""
+    user = request.state.user
+    return {"message": "Hello world!", "user": user}
 
 ```
 
@@ -148,7 +169,7 @@ Then navigate to `http://localhost:8001/docs` to see the Swagger UI.
 
 Service users are "machine users" in Zitadel.
 
-To log in as a service user, change the config in `demo_project/service_user.py`, then
+To log in as a service user, download the private key from Zitadel, change the config in `demo_project/service_user.py`, then
 
 ```bash
 uv run demo_project/service_user.py
@@ -159,3 +180,11 @@ Make sure you have a running server at `http://localhost:8001`.
 ## Development
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
+
+## License
+
+This project is licensed under the terms of the MIT license.
+
+## Acknowledgements
+
+This package was heavily inspired by [`intility/fastapi-azure-auth`](https://github.com/intility/fastapi-azure-auth/).

@@ -1,5 +1,5 @@
 """
-Test the token module
+Test the TokenValidator class
 """
 
 import time
@@ -16,9 +16,7 @@ from fastapi_zitadel_auth.token import TokenValidator
 
 @pytest.fixture(scope="module")
 def rsa_keys() -> tuple:
-    """
-    Generate RSA key pair
-    """
+    """Generate RSA key pair"""
     private_key = rsa.generate_private_key(
         backend=default_backend(), public_exponent=65537, key_size=2048
     )
@@ -28,17 +26,13 @@ def rsa_keys() -> tuple:
 
 @pytest.fixture
 def token_validator() -> TokenValidator:
-    """
-    TokenValidator fixture
-    """
-    return TokenValidator(algorithm="RS256")
+    """TokenValidator fixture"""
+    return TokenValidator()
 
 
 @pytest.fixture
 def valid_token(rsa_keys) -> str:
-    """
-    Generate a valid JWT token
-    """
+    """Generate a valid JWT token"""
     private_key, _ = rsa_keys
     now = int(time.time())
 
@@ -61,23 +55,81 @@ def valid_token(rsa_keys) -> str:
 
 
 class TestTokenValidator:
-    """
-    Test the TokenValidator class
-    """
+    """Test the TokenValidator class"""
 
-    def test_init_with_default_algorithm(self):
-        """
-        Test that the TokenValidator initializes with the default algorithm
-        """
-        validator = TokenValidator()
-        assert validator.algorithm == "RS256"
+    @pytest.mark.parametrize(
+        "claims,required_scopes,expected",
+        [
+            ({"scope": "read:messages write:messages"}, None, True),
+            ({"scope": "read:messages write:messages"}, ["read:messages"], True),
+            (
+                {"scope": "read:messages write:messages"},
+                ["read:messages", "write:messages"],
+                True,
+            ),
+            (
+                {"scope": "read:messages"},
+                ["write:messages"],
+                pytest.raises(InvalidAuthException),
+            ),
+            ({"scope": ""}, ["read:messages"], pytest.raises(InvalidAuthException)),
+            ({}, ["read:messages"], pytest.raises(InvalidAuthException)),
+            (
+                {"scope": "read:messages write:messages"},
+                ["read:messages", "delete:messages"],
+                pytest.raises(InvalidAuthException),
+            ),
+            # Test with multiple space-separated scopes
+            ({"scope": "scope1 scope2 scope3"}, ["scope2"], True),
+            # Test with empty required scopes list
+            ({"scope": "read:messages"}, [], True),
+            # Test with special characters in scopes
+            (
+                {"scope": "api:read user.profile system-admin"},
+                ["api:read", "system-admin"],
+                True,
+            ),
+        ],
+    )
+    def test_validate_scopes(self, claims, required_scopes, expected):
+        """Test scope validation with various combinations of claims and required scopes"""
+        if isinstance(expected, bool):
+            assert TokenValidator.validate_scopes(claims, required_scopes) == expected
+        else:
+            with expected:
+                TokenValidator.validate_scopes(claims, required_scopes)
 
-    def test_init_with_custom_algorithm(self):
-        """
-        Test that the TokenValidator initializes with a custom algorithm
-        """
-        validator = TokenValidator(algorithm="RS384")
-        assert validator.algorithm == "RS384"
+    @pytest.mark.parametrize(
+        "claims",
+        [
+            {"scope": None},
+            {"scope": 123},
+            {"scope": True},
+            {"scope": {"invalid": "type"}},
+        ],
+    )
+    def test_validate_scopes_invalid_type(self, claims):
+        """Test scope validation with invalid scope types"""
+        with pytest.raises(InvalidAuthException):
+            TokenValidator.validate_scopes(claims, ["read:messages"])
+
+    def test_validate_scopes_whitespace_handling(self):
+        """Test handling of various whitespace patterns in scope strings"""
+        claims = {"scope": "scope1    scope2\tscope3\n\rscope4"}
+        assert TokenValidator.validate_scopes(claims, ["scope1", "scope4"]) is True
+
+    @pytest.mark.parametrize(
+        "scope_string,required_scope",
+        [
+            ("a" * 1000 + " valid:scope", "valid:scope"),  # Very long scope string
+            ("scope1" + " " * 100 + "scope2", "scope2"),  # Multiple spaces
+            ("\u3000scope1\u2000scope2", "scope1"),  # Unicode whitespace
+        ],
+    )
+    def test_validate_scopes_edge_cases(self, scope_string, required_scope):
+        """Test scope validation with edge cases"""
+        claims = {"scope": scope_string}
+        assert TokenValidator.validate_scopes(claims, [required_scope]) is True
 
     def test_parse_unverified_valid_token(self, token_validator, valid_token):
         """
@@ -94,11 +146,9 @@ class TestTokenValidator:
         assert "iat" in claims
 
     def test_parse_unverified_none_token(self, token_validator):
-        """
-        Test that the TokenValidator raises an exception when parsing a None token
-        """
+        """Test that the TokenValidator raises an exception when parsing a None token"""
         with pytest.raises(InvalidAuthException, match="Invalid token format"):
-            token_validator.parse_unverified(None)
+            token_validator.parse_unverified(None)  # type: ignore
 
     @pytest.mark.parametrize(
         "invalid_token",
@@ -120,16 +170,12 @@ class TestTokenValidator:
         ],
     )
     def test_parse_unverified_invalid_token(self, token_validator, invalid_token):
-        """
-        Test that the TokenValidator raises an exception when parsing an invalid token
-        """
+        """Test that the TokenValidator raises an exception when parsing an invalid token"""
         with pytest.raises(InvalidAuthException, match="Invalid token format"):
             token_validator.parse_unverified(invalid_token)
 
     def test_verify_valid_token(self, token_validator, valid_token, rsa_keys):
-        """
-        Test that the TokenValidator can verify a valid token
-        """
+        """Test that the TokenValidator can verify a valid token"""
         _, public_key = rsa_keys
 
         claims = token_validator.verify(
@@ -144,9 +190,7 @@ class TestTokenValidator:
         assert "client123" in claims["aud"]
 
     def test_verify_expired_token(self, token_validator, rsa_keys):
-        """
-        Test that the TokenValidator raises an exception when verifying an expired token
-        """
+        """Test that the TokenValidator raises an exception when verifying an expired token"""
         private_key, public_key = rsa_keys
         now = int(time.time())
 
@@ -176,9 +220,7 @@ class TestTokenValidator:
             )
 
     def test_verify_invalid_audience(self, token_validator, valid_token, rsa_keys):
-        """
-        Test that the TokenValidator raises an exception when verifying a token with an invalid audience
-        """
+        """Test that the TokenValidator raises an exception when verifying a token with an invalid audience"""
         _, public_key = rsa_keys
 
         with pytest.raises(jwt.InvalidAudienceError):
@@ -190,9 +232,7 @@ class TestTokenValidator:
             )
 
     def test_verify_invalid_issuer(self, token_validator, valid_token, rsa_keys):
-        """
-        Test that the TokenValidator raises an exception when verifying a token with an invalid issuer
-        """
+        """Test that the TokenValidator raises an exception when verifying a token with an invalid issuer"""
         _, public_key = rsa_keys
 
         with pytest.raises(jwt.InvalidIssuerError):
@@ -204,9 +244,7 @@ class TestTokenValidator:
             )
 
     def test_verify_invalid_signature(self, token_validator, valid_token):
-        """
-        Test that the TokenValidator raises an exception when verifying a token with an invalid signature
-        """
+        """Test that the TokenValidator raises an exception when verifying a token with an invalid signature"""
         wrong_key = rsa.generate_private_key(
             backend=default_backend(), public_exponent=65537, key_size=2048
         ).public_key()
@@ -220,9 +258,7 @@ class TestTokenValidator:
             )
 
     def test_verify_not_yet_valid(self, token_validator, rsa_keys):
-        """
-        Raise Exception when verifying a token that is not yet valid
-        """
+        """Raise Exception when verifying a token that is not yet valid"""
         private_key, public_key = rsa_keys
         now = int(time.time())
 
@@ -252,9 +288,7 @@ class TestTokenValidator:
             )
 
     def test_verify_missing_claims(self, token_validator, rsa_keys):
-        """
-        Raise Exception when verifying a token with missing required claims
-        """
+        """Raise Exception when verifying a token with missing required claims"""
         private_key, public_key = rsa_keys
         now = int(time.time())
 

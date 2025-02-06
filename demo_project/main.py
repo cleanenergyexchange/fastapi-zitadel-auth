@@ -12,11 +12,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 
 try:
-    from demo_project.dependencies import zitadel_auth, validate_is_system_user  # type: ignore[no-redef]
+    from demo_project.dependencies import zitadel_auth, validate_is_admin_user  # type: ignore[no-redef]
     from demo_project.settings import get_settings  # type: ignore[no-redef]
 except ImportError:
     # ImportError handling since it's also used in tests
-    from dependencies import zitadel_auth, validate_is_system_user  # type: ignore[no-redef]
+    from dependencies import zitadel_auth, validate_is_admin_user  # type: ignore[no-redef]
     from settings import get_settings  # type: ignore[no-redef]
 
 settings = get_settings()
@@ -27,14 +27,6 @@ logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger.info(f"Settings: {settings.model_dump_json()}")
-
-ZITADEL_SCOPES = {
-    "openid": "Required for OpenID Connect",
-    "profile": "Access to user profile information",
-    "email": "Access to email information",
-    "urn:zitadel:iam:org:projects:roles": "Access to project roles",
-    "urn:zitadel:iam:org:project:id:zitadel:aud": "Zitadel project audience",
-}
 
 
 @asynccontextmanager
@@ -53,7 +45,15 @@ app = FastAPI(
     swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": settings.OAUTH_CLIENT_ID,
-        "scopes": " ".join(ZITADEL_SCOPES.keys()),
+        "scopes": " ".join(
+            [
+                "openid",
+                "profile",
+                "email",
+                "urn:zitadel:iam:org:projects:roles",
+                "urn:zitadel:iam:org:project:id:zitadel:aud",
+            ]
+        ),
     },
 )
 
@@ -69,18 +69,30 @@ app.add_middleware(
 
 @app.get("/api/public", summary="Public endpoint")
 def public():
+    """Public endpoint"""
     return {"message": "Hello, public world!"}
 
 
 @app.get(
-    "/api/private",
-    summary="Private endpoint",
-    dependencies=[Security(validate_is_system_user)],
+    "/api/protected/admin",
+    summary="Private endpoint, requires admin role",
+    dependencies=[Security(validate_is_admin_user)],
 )
-def protected(request: Request):
-    return {
-        "message": f"Hello, protected world! Here is Zitadel user with id {request.state.user.claims.sub}"
-    }
+def protected_for_admin(request: Request):
+    """Protected endpoint"""
+    user = request.state.user
+    return {"message": "Hello world!", "user": user}
+
+
+@app.get(
+    "/api/protected/scope",
+    summary="Private endpoint, requires a specific scope",
+    dependencies=[Security(zitadel_auth, scopes=["scope1"])],
+)
+def protected_by_scope(request: Request):
+    """Protected endpoint, requires a specific scope"""
+    user = request.state.user
+    return {"message": "Hello world!", "user": user}
 
 
 if __name__ == "__main__":

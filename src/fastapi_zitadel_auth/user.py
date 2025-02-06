@@ -12,22 +12,24 @@ UserT = TypeVar("UserT", bound="BaseZitadelUser[Any]")
 
 
 class BaseZitadelClaims(BaseModel):
-    """Base model for standard JWT and OpenID claims"""
+    """Base model for JWT access token claims in Zitadel
+    as per RFC 7519 and Zitadel
+    """
 
-    # Standard JWT claims
-    aud: str | list[str]
-    exp: int
-    iat: int
-    iss: str
-    sub: str
-    nbf: int | None = None
-    jti: str | None = None
-
-    # Standard OpenID claims
-    email: str | None = None
-    email_verified: bool | None = None
-    preferred_username: str | None = None
-    name: str | None = None
+    aud: str | list[str] = Field(
+        description="The audience of the token (e.g. client_id and project_id)"
+    )
+    client_id: str = Field(
+        description="Client id of the client who requested the token"
+    )
+    exp: int = Field(description="Time the token expires (as unix time)")
+    iat: int = Field(description="Time of the token was issued at (as unix time)")
+    iss: str = Field(description="Issuing domain of a token")
+    sub: str = Field(description="Subject ID of the user")
+    nbf: int = Field(
+        description="Time the token must not be used before (as unix time)"
+    )
+    jti: str = Field(description="Unique id of the token")
 
 
 class BaseZitadelUser(BaseModel, Generic[ClaimsT]):
@@ -35,10 +37,6 @@ class BaseZitadelUser(BaseModel, Generic[ClaimsT]):
 
     claims: ClaimsT
     access_token: str
-
-    def __str__(self):
-        """Return user but redact token"""
-        return f"{self.__class__.__name__}({self.model_dump_json(exclude={'access_token'})})"
 
 
 class DefaultZitadelClaims(BaseZitadelClaims):
