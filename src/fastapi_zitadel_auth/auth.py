@@ -131,12 +131,7 @@ class ZitadelAuth(SecurityBase):
             unverified_header, unverified_claims = (
                 self.token_validator.parse_unverified_token(access_token)
             )
-            if (
-                unverified_header.get("alg") != "RS256"
-                or unverified_header.get("typ") != "JWT"
-            ):
-                raise InvalidAuthException("Invalid token header")
-
+            self.token_validator.validate_header(unverified_header)
             self.token_validator.validate_scopes(
                 unverified_claims, security_scopes.scopes
             )
@@ -145,7 +140,7 @@ class ZitadelAuth(SecurityBase):
 
             try:
                 signing_key = self.openid_config.get_signing_key(
-                    unverified_header.get("kid", "")
+                    unverified_header["kid"]
                 )
                 if signing_key is not None:
                     verified_claims = self.token_validator.verify(

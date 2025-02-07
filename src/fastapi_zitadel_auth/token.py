@@ -58,6 +58,12 @@ class TokenValidator:
             raise InvalidAuthException("Invalid token format") from e
 
     @staticmethod
+    def validate_header(header: dict[str, Any]) -> None:
+        """Validate token header"""
+        if header.get("alg") != "RS256" or header.get("typ") != "JWT":
+            raise InvalidAuthException("Invalid token header")
+
+    @staticmethod
     def verify(
         token: str,
         key: RSAPublicKey,
