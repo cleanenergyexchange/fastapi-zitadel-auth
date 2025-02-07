@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 async def test_http_error_old_config_found(respx_mock):
     """Test that the OpenID config is fetched if the current one is old"""
     zitadel_auth.openid_config.last_refresh_timestamp = datetime.now() - timedelta(
-        hours=20
+        hours=zitadel_auth.openid_config.cache_duration_minutes + 1
     )
     zitadel_auth.openid_config.signing_keys = create_openid_keys()
     respx_mock.get(openid_config_url()).respond(status_code=500)
