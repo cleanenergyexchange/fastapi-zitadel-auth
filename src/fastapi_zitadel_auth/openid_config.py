@@ -14,13 +14,14 @@ log = logging.getLogger("fastapi_zitadel_auth")
 class OpenIdConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, strict=True, extra="forbid")
 
-    issuer: str
+    issuer_url: str
     config_url: str
     authorization_url: str
     token_url: str
     jwks_uri: str
     signing_keys: dict[str, RSAPublicKey] = {}
-    last_refresh: datetime | None = None
+    last_refresh_timestamp: datetime | None = None
+    cache_duration_minutes: int = 60
 
     async def load_config(self) -> None:
         """
@@ -30,7 +31,7 @@ class OpenIdConfig(BaseModel):
             try:
                 log.info("Refreshing OpenID config and signing keys")
                 await self._refresh()
-                self.last_refresh = datetime.now()
+                self.last_refresh_timestamp = datetime.now()
             except Exception as error:
                 log.error("Error fetching OpenID config: %s", error)
                 raise InvalidAuthException(
@@ -38,19 +39,23 @@ class OpenIdConfig(BaseModel):
                 ) from error
 
             log.info("Loaded OpenID configuration from Zitadel.")
-            log.info("Issuer:               %s", self.issuer)
+            log.info("Issuer:               %s", self.issuer_url)
             log.info("Authorization url:    %s", self.authorization_url)
             log.info("Token url:            %s", self.token_url)
             log.debug("Keys url:            %s", self.jwks_uri)
-            log.debug("Last refresh:        %s", self.last_refresh)
+            log.debug("Last refresh:        %s", self.last_refresh_timestamp)
             log.debug("Signing keys:        %s", len(self.signing_keys))
+
+    def get_signing_key(self, kid: str) -> RSAPublicKey | None:
+        """Get the JWK signing key for the given key ID"""
+        return self.signing_keys.get(kid)
 
     def _needs_refresh(self) -> bool:
         """Check if config needs refresh"""
-        if not self.last_refresh or not self.signing_keys:
+        if not self.last_refresh_timestamp or not self.signing_keys:
             return True
-        refresh_time = datetime.now() - timedelta(hours=1)
-        return self.last_refresh < refresh_time
+        refresh_time = datetime.now() - timedelta(minutes=self.cache_duration_minutes)
+        return self.last_refresh_timestamp < refresh_time
 
     async def _refresh(self) -> None:
         """Fetch both OpenID config and signing keys"""
@@ -62,7 +67,7 @@ class OpenIdConfig(BaseModel):
             config = openid_response.json()
 
             # Update config values
-            self.issuer = config["issuer"]
+            self.issuer_url = config["issuer_url"]
             self.authorization_url = config["authorization_endpoint"]
             self.token_url = config["token_endpoint"]
             self.jwks_uri = config["jwks_uri"]

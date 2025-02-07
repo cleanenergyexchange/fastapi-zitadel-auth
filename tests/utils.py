@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 
 def zitadel_issuer() -> str:
-    """Zitadel issuer URL used for tests"""
+    """Zitadel issuer_url URL used for tests"""
     return "https://test-fza01.zitadel.cloud"
 
 

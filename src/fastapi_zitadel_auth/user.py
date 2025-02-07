@@ -17,7 +17,7 @@ class BaseZitadelClaims(BaseModel):
     """
 
     aud: str | list[str] = Field(
-        description="The audience of the token (e.g. client_id and project_id)"
+        description="The audience of the token (e.g. app_client_id and project_id)"
     )
     client_id: str = Field(
         description="Client id of the client who requested the token"

@@ -80,10 +80,10 @@ PROJECT_ID = 'your-zitadel-project-id'
 
 # Create a ZitadelAuth object usable as a FastAPI dependency
 zitadel_auth = ZitadelAuth(
-    issuer=HttpUrl('https://your-instance-xyz.zitadel.cloud'),
+    issuer_url=HttpUrl('https://your-instance-xyz.zitadel.cloud'),
     project_id=PROJECT_ID,
-    client_id=CLIENT_ID,
-    scopes={
+    app_client_id=CLIENT_ID,
+    allowed_scopes={
         "openid": "OpenID Connect",
         "email": "Email",
         "profile": "Profile",
@@ -91,6 +91,7 @@ zitadel_auth = ZitadelAuth(
         "urn:zitadel:iam:org:projects:roles": "Roles",
     }
 )
+
 
 # Create a dependency to validate that the user has the required role
 async def validate_is_admin_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
@@ -115,13 +116,13 @@ app = FastAPI(
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": CLIENT_ID,
         "scopes": " ".join(  # defining the pre-selected scope ticks in the Swagger UI
-                [
-                    "openid",
-                    "profile",
-                    "email",
-                    "urn:zitadel:iam:org:projects:roles",
-                    "urn:zitadel:iam:org:project:id:zitadel:aud",
-                ]
+            [
+                "openid",
+                "profile",
+                "email",
+                "urn:zitadel:iam:org:projects:roles",
+                "urn:zitadel:iam:org:project:id:zitadel:aud",
+            ]
         ),
     },
 )

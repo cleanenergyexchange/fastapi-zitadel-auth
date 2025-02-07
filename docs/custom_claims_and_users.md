@@ -13,12 +13,9 @@ from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import BaseZitadelClaims, BaseZitadelUser
 
 class CustomZitadelClaims(BaseZitadelClaims):
-    """Custom claims model with additional fields"""
+    """Custom claims model with additional fields, inheriting from BaseZitadelClaims"""
 
-    # Inherit standard JWT claims from BaseZitadelClaims
-    # (aud, exp, iat, iss, sub, etc.)
-
-    # Add your custom claims
+    # Add your custom claims, e.g. organizations
     organizations: list[str] = Field(
         default_factory=list,
         alias="myfield:xyz:orgs"
@@ -45,5 +42,4 @@ auth = ZitadelAuth[CustomZitadelClaims, CustomZitadelUser](
 
 ## Important Notes
 
-1. `BaseZitadelClaims` includes standard JWT claims (aud, exp, iat, etc.) and OpenID claims (email, name, etc.)
-2. If you need Zitadel project roles, remember to include the project_roles field and validator, or extend the default implementation.
+If you need Zitadel project roles, remember to include the `project_roles` field and validator, or extend the default implementation.

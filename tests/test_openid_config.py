@@ -14,7 +14,7 @@ from tests.utils import valid_key, zitadel_issuer, openid_config_url
 def mock_openid_config():
     """Fixture providing mock OpenID configuration data."""
     return {
-        "issuer": zitadel_issuer(),
+        "issuer_url": zitadel_issuer(),
         "authorization_endpoint": f"{zitadel_issuer()}/oauth/v2/authorize",
         "token_endpoint": f"{zitadel_issuer()}/oauth/v2/token",
         "jwks_uri": f"{zitadel_issuer()}/oauth/v2/keys",
@@ -57,7 +57,7 @@ class TestOpenIdConfig:
         """Test that OpenIdConfig loads config and keys correctly"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer="",
+            issuer_url="",
             config_url=config_url,
             authorization_url="",
             token_url="",
@@ -69,7 +69,7 @@ class TestOpenIdConfig:
 
         await config.load_config()
 
-        assert config.issuer == mock_openid_config["issuer"]
+        assert config.issuer_url == mock_openid_config["issuer_url"]
         assert config.authorization_url == mock_openid_config["authorization_endpoint"]
         assert config.token_url == mock_openid_config["token_endpoint"]
         assert config.jwks_uri == mock_openid_config["jwks_uri"]
@@ -84,7 +84,7 @@ class TestOpenIdConfig:
         """Test that config is cached and only refreshed after expiry"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer="",
+            issuer_url="",
             config_url=config_url,
             authorization_url="",
             token_url="",
@@ -96,24 +96,24 @@ class TestOpenIdConfig:
 
         freezer.move_to("2025-02-05 18:00:00")
         await config.load_config()
-        initial_refresh = config.last_refresh
+        initial_refresh = config.last_refresh_timestamp
 
         freezer.move_to("2025-02-05 18:30:00")  # 30 min later
         await config.load_config()  # Should use cached config
         assert (
-            config.last_refresh == initial_refresh
+            config.last_refresh_timestamp == initial_refresh
         )  # Timestamp shouldn't change for cache hit
 
-        # Set last_refresh to 2 hours ago
-        config.last_refresh = datetime.now() - timedelta(hours=2)
+        # Set last_refresh_timestamp to 2 hours ago
+        config.last_refresh_timestamp = datetime.now() - timedelta(hours=2)
         await config.load_config()  # Should refresh
-        assert config.last_refresh > initial_refresh
+        assert config.last_refresh_timestamp > initial_refresh
 
     async def test_key_filtering(self, respx_mock, mock_openid_config):
         """Test that invalid keys are filtered out"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer="",
+            issuer_url="",
             config_url=config_url,
             authorization_url="",
             token_url="",
@@ -141,7 +141,7 @@ class TestOpenIdConfig:
         assert len(config.signing_keys) == 0
 
     @pytest.mark.parametrize(
-        "last_refresh, signing_key, expected",
+        "last_refresh_timestamp, signing_key, expected",
         [
             (None, {}, True),  # No config -> refresh
             (datetime.now(), {}, True),  # No keys -> refresh
@@ -158,16 +158,16 @@ class TestOpenIdConfig:
             (None, valid_key.public_key(), True),  # No config, but keys -> refresh
         ],
     )
-    async def test_needs_refresh(self, last_refresh, signing_key, expected):
-        """Test that _needs_refresh method works as expected based on last_refresh and signing_keys"""
+    async def test_needs_refresh(self, last_refresh_timestamp, signing_key, expected):
+        """Test that _needs_refresh method works as expected based on last_refresh_timestamp and signing_keys"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer="",
+            issuer_url="",
             config_url=config_url,
             authorization_url="",
             token_url="",
             jwks_uri="",
-            last_refresh=last_refresh,
+            last_refresh_timestamp=last_refresh_timestamp,
             signing_keys={"kid": signing_key} if signing_key else {},
         )
         assert config._needs_refresh() == expected

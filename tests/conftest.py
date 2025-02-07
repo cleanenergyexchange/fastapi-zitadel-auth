@@ -19,10 +19,10 @@ from tests.utils import create_openid_keys, zitadel_issuer, openid_config_url, k
 def fastapi_app():
     """FastAPI app fixture"""
     zitadel_auth_overrides = ZitadelAuth(
-        issuer=zitadel_issuer(),
-        client_id="123456789",
+        issuer_url=zitadel_issuer(),
+        app_client_id="123456789",
         project_id="987654321",
-        scopes={"scope1": "Some scope"},
+        allowed_scopes={"scope1": "Some scope"},
     )
     app.dependency_overrides[zitadel_auth] = zitadel_auth_overrides
     yield
@@ -31,7 +31,7 @@ def fastapi_app():
 @pytest.fixture(autouse=True)
 async def reset_openid_config():
     """Reset the OpenID configuration before each test"""
-    zitadel_auth.openid_config.last_refresh = None
+    zitadel_auth.openid_config.last_refresh_timestamp = None
     zitadel_auth.openid_config.signing_keys = {}
     yield
 
@@ -47,7 +47,7 @@ def openid_configuration() -> dict:
     """OpenID configuration fixture"""
     zitadel_host = zitadel_issuer()
     return {
-        "issuer": zitadel_host,
+        "issuer_url": zitadel_host,
         "authorization_endpoint": f"{zitadel_host}/oauth/v2/authorize",
         "token_endpoint": f"{zitadel_host}/oauth/v2/token",
         "introspection_endpoint": f"{zitadel_host}/oauth/v2/introspect",
@@ -109,8 +109,8 @@ def openid_configuration() -> dict:
             "c_hash",
             "at_hash",
             "act",
-            "scopes",
-            "client_id",
+            "allowed_scopes",
+            "app_client_id",
             "azp",
             "preferred_username",
             "name",
