@@ -11,6 +11,7 @@ To contribute, follow these steps:
 7. Format code with `uv run format src`
 8. Lint code with `uv run check --fix src`
 9. Run mypy with `uv run mypy src`
-10. Write and run tests: `uv run pytest`
+10. Write and run tests with `uv run pytest`
 11. Create a pull request.
-12. Link the issue in the pull request.
+12. Make sure the CI checks pass.
+13. Link the issue in the pull request.

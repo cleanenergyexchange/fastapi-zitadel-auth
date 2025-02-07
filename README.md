@@ -14,7 +14,7 @@ including token validation, role-based access control, and Swagger UI integratio
     <img src="https://img.shields.io/pypi/v/fastapi-zitadel-auth.svg?logo=pypi&logoColor=white&label=pypi" alt="Package version">
 </a>
 <a href="https://pepy.tech/projects/fastapi-zitadel-auth">
-    <img src="https://static.pepy.tech/badge/fastapi-zitadel-auth/month" alt="PyPI Downloads">
+    <img src="https://static.pepy.tech/badge/fastapi-zitadel-auth/month" alt="PyPI downloads">
 </a>
 <a href="https://python.org">
     <img src="https://img.shields.io/badge/python-v3.10+-blue.svg?logo=python&logoColor=white&label=python" alt="Python versions">
@@ -74,7 +74,7 @@ from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import DefaultZitadelUser
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
-# Define your Zitadel project ID, client ID
+# Define your project ID, client ID - get them from Zitadel console
 CLIENT_ID = 'your-zitadel-client-id'
 PROJECT_ID = 'your-zitadel-project-id'
 
@@ -135,19 +135,17 @@ app = FastAPI(
     dependencies=[Security(validate_is_admin_user)],
 )
 def protected_for_admin(request: Request):
-    """Protected endpoint, requires admin role"""
     user = request.state.user
     return {"message": "Hello world!", "user": user}
 
 
-# Endpoint that requires a user to be authenticated
+# Endpoint that requires a user to be authenticated and have a specific scope
 @app.get(
     "/api/protected/scope",
     summary="Protected endpoint, requires a specific scope",
     dependencies=[Security(zitadel_auth, scopes=["scope1"])],
 )
 def protected_by_scope(request: Request):
-    """Protected endpoint, requires a specific scope"""
     user = request.state.user
     return {"message": "Hello world!", "user": user}
 
@@ -159,7 +157,7 @@ If you need to customize the claims or user model, see [docs/custom_claims_and_u
 
 See `demo_project` for a complete example, including service user login. 
 
-To run the demo app:
+To run the demo app using `uv`:
 
 ```bash
 uv run demo_project/main.py
@@ -168,25 +166,20 @@ uv run demo_project/main.py
 Then navigate to `http://localhost:8001/docs` to see the Swagger UI.
 
 
-### Service user
+### Service user login
 
-Service users are "machine users" in Zitadel.
-
-To log in as a service user, download the private key from Zitadel, change the config in `demo_project/service_user.py`, then
+Service users are "machine users" in Zitadel. To log in as a service user, download the private key from Zitadel, change the config in `demo_project/service_user.py`, then
 
 ```bash
 uv run demo_project/service_user.py
 ```
 
-Make sure you have a running server at `http://localhost:8001`.
+Make sure you have a running server at `http://localhost:8001` (see above).
 
 ## Development
 
 See [docs/contributing.md](docs/contributing.md) for development instructions.
 
-## License
-
-This project is licensed under the terms of the MIT license.
 
 ## Acknowledgements
 
