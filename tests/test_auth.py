@@ -210,7 +210,7 @@ async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
         headers={"Authorization": "Bearer " + create_test_token(alg="RS512")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-    assert response.json() == {"detail": "Unsupported token algorithm"}
+    assert response.json() == {"detail": "Invalid token header"}
 
 
 async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
@@ -221,7 +221,7 @@ async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
         headers={"Authorization": "Bearer " + create_test_token(typ="JWS")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-    assert response.json() == {"detail": "Unsupported token type"}
+    assert response.json() == {"detail": "Invalid token header"}
 
 
 async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):

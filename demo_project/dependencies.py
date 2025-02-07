@@ -18,10 +18,10 @@ except ImportError:
 settings = get_settings()
 
 zitadel_auth = ZitadelAuth(
-    issuer=settings.ZITADEL_HOST,
+    issuer_url=settings.ZITADEL_HOST,
     project_id=settings.ZITADEL_PROJECT_ID,
-    client_id=settings.OAUTH_CLIENT_ID,
-    scopes={
+    app_client_id=settings.OAUTH_CLIENT_ID,
+    allowed_scopes={
         "openid": "OpenID Connect",
         "email": "Email",
         "profile": "Profile",

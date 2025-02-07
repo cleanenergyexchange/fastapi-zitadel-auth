@@ -81,11 +81,11 @@ class TestTokenValidator:
                 ["read:messages", "delete:messages"],
                 pytest.raises(InvalidAuthException),
             ),
-            # Test with multiple space-separated scopes
+            # Test with multiple space-separated allowed_scopes
             ({"scope": "scope1 scope2 scope3"}, ["scope2"], True),
-            # Test with empty required scopes list
+            # Test with empty required allowed_scopes list
             ({"scope": "read:messages"}, [], True),
-            # Test with special characters in scopes
+            # Test with special characters in allowed_scopes
             (
                 {"scope": "api:read user.profile system-admin"},
                 ["api:read", "system-admin"],
@@ -94,7 +94,7 @@ class TestTokenValidator:
         ],
     )
     def test_validate_scopes(self, claims, required_scopes, expected):
-        """Test scope validation with various combinations of claims and required scopes"""
+        """Test scope validation with various combinations of claims and required allowed_scopes"""
         if isinstance(expected, bool):
             assert TokenValidator.validate_scopes(claims, required_scopes) == expected
         else:
@@ -137,7 +137,7 @@ class TestTokenValidator:
         """
         Test that the TokenValidator can parse an unverified token
         """
-        header, claims = token_validator.parse_unverified(valid_token)
+        header, claims = token_validator.parse_unverified_token(valid_token)
 
         assert isinstance(header, dict)
         assert isinstance(claims, dict)
@@ -154,7 +154,7 @@ class TestTokenValidator:
     def test_parse_unverified_none_token(self, token_validator):
         """Test that the TokenValidator raises an exception when parsing a None token"""
         with pytest.raises(InvalidAuthException, match="Invalid token format"):
-            token_validator.parse_unverified(None)  # type: ignore
+            token_validator.parse_unverified_token(None)  # type: ignore
 
     @pytest.mark.parametrize(
         "invalid_token",
@@ -178,7 +178,7 @@ class TestTokenValidator:
     def test_parse_unverified_invalid_token(self, token_validator, invalid_token):
         """Test that the TokenValidator raises an exception when parsing an invalid token"""
         with pytest.raises(InvalidAuthException, match="Invalid token format"):
-            token_validator.parse_unverified(invalid_token)
+            token_validator.parse_unverified_token(invalid_token)
 
     def test_verify_valid_token(self, token_validator, valid_token, rsa_keys):
         """Test that the TokenValidator can verify a valid token"""
@@ -239,7 +239,7 @@ class TestTokenValidator:
             )
 
     def test_verify_invalid_issuer(self, token_validator, valid_token, rsa_keys):
-        """Test that the TokenValidator raises an exception when verifying a token with an invalid issuer"""
+        """Test that the TokenValidator raises an exception when verifying a token with an invalid issuer_url"""
         _, public_key = rsa_keys
 
         with pytest.raises(jwt.InvalidIssuerError):

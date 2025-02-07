@@ -21,7 +21,14 @@ from pydantic import HttpUrl
 from starlette.requests import Request
 
 from .exceptions import InvalidAuthException
-from .user import ClaimsT, DefaultZitadelClaims, DefaultZitadelUser, UserT
+from .user import (
+    ClaimsT,
+    DefaultZitadelClaims,
+    DefaultZitadelUser,
+    UserT,
+    BaseZitadelClaims,
+    BaseZitadelUser,
+)
 from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
@@ -38,37 +45,69 @@ class ZitadelAuth(SecurityBase):
 
     def __init__(
         self,
-        issuer: HttpUrl | str,
+        issuer_url: HttpUrl | str,
         project_id: str,
-        client_id: str,
-        scopes: dict[str, str],
-        leeway: float = 0,
+        app_client_id: str,
+        allowed_scopes: dict[str, str],
+        token_leeway: float = 0,
         claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
         user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
     ) -> None:
         """
         Initialize the ZitadelAuth object
+
+        :param issuer_url: HttpUrl | str
+            The Zitadel issuer URL
+
+        :param project_id: str
+            The Zitadel project ID
+
+        :param app_client_id: str
+            The Zitadel application client ID
+
+        :param allowed_scopes: dict[str, str]
+            The allowed scopes for the application. Key is the scope name and value is the description.
+            Example:
+                {
+                    "read": "Read access"
+                }
+
+        :param token_leeway: float
+            The tolerance time in seconds for token validation
+
+        :param claims_model: Type[ClaimsT]
+            The claims model to use, e.g. DefaultZitadelClaims. See user.py
+
+        :param user_model:  Type[UserT]
+            The user model to use, e.g. DefaultZitadelUser. See user.py
         """
-        self.client_id = client_id
+
+        self.client_id = app_client_id
         self.project_id = project_id
-        self.issuer = str(issuer).rstrip("/")
-        self.leeway = leeway
+        self.issuer_url = str(issuer_url).rstrip("/")
+        self.token_leeway = token_leeway
+
+        if not issubclass(claims_model, BaseZitadelClaims):
+            raise ValueError("claims_model must be a subclass of BaseZitadelClaims")
+
+        if not issubclass(user_model, BaseZitadelUser):
+            raise ValueError("user_model must be a subclass of BaseZitadelUser")
 
         self.claims_model = claims_model
         self.user_model = user_model
 
         self.openid_config = OpenIdConfig(
-            issuer=self.issuer,
-            config_url=f"{self.issuer}/.well-known/openid-configuration",
-            authorization_url=f"{self.issuer}/oauth/v2/authorize",
-            token_url=f"{self.issuer}/oauth/v2/token",
-            jwks_uri=f"{self.issuer}/oauth/v2/keys",
+            issuer_url=self.issuer_url,
+            config_url=f"{self.issuer_url}/.well-known/openid-configuration",
+            authorization_url=f"{self.issuer_url}/oauth/v2/authorize",
+            token_url=f"{self.issuer_url}/oauth/v2/token",
+            jwks_uri=f"{self.issuer_url}/oauth/v2/keys",
         )
 
         self.oauth = OAuth2AuthorizationCodeBearer(
             authorizationUrl=self.openid_config.authorization_url,
             tokenUrl=self.openid_config.token_url,
-            scopes=scopes,
+            scopes=allowed_scopes,
             scheme_name="ZitadelAuthorizationCodeBearer",
             description="Zitadel OAuth2 authentication using bearer token",
         )
@@ -81,57 +120,50 @@ class ZitadelAuth(SecurityBase):
         self, request: Request, security_scopes: SecurityScopes
     ) -> UserT | None:
         """
-        Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
+        Extend the SecurityBase.__call__ method to validate the Zitadel OAuth2 token.
+        see also FastAPI -> "Advanced Dependency".
         """
-
         try:
-            # extract token from request
             access_token = await self._extract_access_token(request)
             if access_token is None:
                 raise InvalidAuthException("No access token provided")
 
-            # Parse unverified header and claims
-            header, claims = self.token_validator.parse_unverified(token=access_token)
-            log.debug("Unverified header: %s", header)
-            log.debug("Unverified claims: %s", claims)
+            unverified_header, unverified_claims = (
+                self.token_validator.parse_unverified_token(access_token)
+            )
+            if (
+                unverified_header.get("alg") != "RS256"
+                or unverified_header.get("typ") != "JWT"
+            ):
+                raise InvalidAuthException("Invalid token header")
 
-            # Validate header
-            if header.get("alg") != "RS256":
-                raise InvalidAuthException("Unsupported token algorithm")
-            if header.get("typ") != "JWT":
-                raise InvalidAuthException("Unsupported token type")
+            self.token_validator.validate_scopes(
+                unverified_claims, security_scopes.scopes
+            )
 
-            log.debug("Required scopes: '%s'", security_scopes.scope_str)
-            # Validate scopes
-            self.token_validator.validate_scopes(claims, security_scopes.scopes)
-
-            # Load or refresh the openid config
             await self.openid_config.load_config()
 
-            # Get the JWKS key for the token
-            log.debug("Token header kid: %s", header.get("kid", ""))
-            key = self.openid_config.signing_keys.get(header.get("kid", ""))
-            log.debug("Public key: %s", key)
-            if key is None:
+            signing_key = self.openid_config.get_signing_key(
+                unverified_header.get("kid", "")
+            )
+            if signing_key is None:
                 raise InvalidAuthException(
                     "Unable to verify token, no signing keys found"
                 )
 
-            # Verify the token with the public key
             verified_claims = self.token_validator.verify(
                 token=access_token,
-                key=key,
+                key=signing_key,
                 audiences=[self.client_id, self.project_id],
-                issuer=self.openid_config.issuer,
-                leeway=self.leeway,
+                issuer=self.openid_config.issuer_url,
+                token_leeway=self.token_leeway,
             )
 
-            # Create the user object
             user: UserT = self.user_model(  # type: ignore
                 claims=self.claims_model.model_validate(verified_claims),
                 access_token=access_token,
             )
-            # Attach user to starlette.request.state
+            # Add the user to the request state
             request.state.user = user
             return user
 

@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 import jwt
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
@@ -39,24 +40,32 @@ class TokenValidator:
         return True
 
     @staticmethod
-    def parse_unverified(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    def parse_unverified_token(
+        access_token: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Parse header and claims without verification"""
         try:
-            header = dict(jwt.get_unverified_header(token))
-            claims = dict(jwt.decode(token, options={"verify_signature": False}))
+            header = dict(jwt.get_unverified_header(access_token))
+            claims = dict(jwt.decode(access_token, options={"verify_signature": False}))
             return header, claims
         except Exception as e:
+            log.warning(
+                "Malformed token received. %s. Error: %s",
+                access_token,
+                e,
+                exc_info=True,
+            )
             raise InvalidAuthException("Invalid token format") from e
 
     @staticmethod
     def verify(
         token: str,
-        key: Any,
+        key: RSAPublicKey,
         audiences: list[str],
         issuer: str,
-        leeway: float = 0,
+        token_leeway: float = 0,
     ) -> dict[str, Any]:
-        """Verify token signature and claims"""
+        """Verify token signature and claims with provided key"""
         options = {
             "verify_signature": True,
             "verify_exp": True,
@@ -74,6 +83,6 @@ class TokenValidator:
             algorithms=["RS256"],
             audience=audiences,
             issuer=issuer,
-            leeway=leeway,
+            leeway=token_leeway,
             options=options,
         )
