@@ -143,55 +143,61 @@ class ZitadelAuth(SecurityBase):
 
             await self.openid_config.load_config()
 
-            signing_key = self.openid_config.get_signing_key(
-                unverified_header.get("kid", "")
-            )
-            if signing_key is None:
-                raise InvalidAuthException(
-                    "Unable to verify token, no signing keys found"
+            try:
+                signing_key = self.openid_config.get_signing_key(
+                    unverified_header.get("kid", "")
                 )
+                if signing_key is not None:
+                    verified_claims = self.token_validator.verify(
+                        token=access_token,
+                        key=signing_key,
+                        audiences=[self.client_id, self.project_id],
+                        issuer=self.openid_config.issuer_url,
+                        token_leeway=self.token_leeway,
+                    )
 
-            verified_claims = self.token_validator.verify(
-                token=access_token,
-                key=signing_key,
-                audiences=[self.client_id, self.project_id],
-                issuer=self.openid_config.issuer_url,
-                token_leeway=self.token_leeway,
-            )
+                    user: UserT = self.user_model(  # type: ignore
+                        claims=self.claims_model.model_validate(verified_claims),
+                        access_token=access_token,
+                    )
+                    # Add the user to the request state
+                    request.state.user = user
+                    return user
+            except (
+                InvalidAudienceError,
+                InvalidIssuerError,
+                InvalidIssuedAtError,
+                ImmatureSignatureError,
+                MissingRequiredClaimError,
+            ) as error:
+                log.info(f"Token contains invalid claims: {error}")
+                raise InvalidAuthException("Token contains invalid claims") from error
 
-            user: UserT = self.user_model(  # type: ignore
-                claims=self.claims_model.model_validate(verified_claims),
-                access_token=access_token,
-            )
-            # Add the user to the request state
-            request.state.user = user
-            return user
+            except ExpiredSignatureError as error:
+                log.info(f"Token signature has expired. {error}")
+                raise InvalidAuthException("Token signature has expired") from error
 
-        except (
-            InvalidAudienceError,
-            InvalidIssuerError,
-            InvalidIssuedAtError,
-            ImmatureSignatureError,
-            MissingRequiredClaimError,
-        ) as error:
-            log.warning(f"Token contains invalid claims: {error}")
-            raise InvalidAuthException("Token contains invalid claims") from error
+            except InvalidTokenError as error:
+                log.warning(f"Invalid token. Error: {error}", exc_info=True)
+                raise InvalidAuthException("Unable to validate token") from error
 
-        except ExpiredSignatureError as error:
-            log.warning(f"Token signature has expired. {error}")
-            raise InvalidAuthException("Token signature has expired") from error
+            except Exception as error:
+                # Extra failsafe in case of a bug in PyJWT
+                log.exception(f"Unable to process jwt token. Uncaught error: {error}")
+                raise InvalidAuthException("Unable to process token") from error
 
-        except InvalidTokenError as error:
-            log.warning(f"Invalid token. Error: {error}", exc_info=True)
-            raise InvalidAuthException("Unable to validate token") from error
+            log.warning("Unable to verify token, no signing keys found")
+            raise InvalidAuthException("Unable to verify token, no signing keys found")
 
         except (InvalidAuthException, HTTPException):
             raise
 
         except Exception as error:
-            # Extra failsafe in case of a bug
-            log.exception(f"Unable to process jwt token. Uncaught error: {error}")
-            raise InvalidAuthException("Unable to process token") from error
+            # Failsafe in case of error in OAuth2AuthorizationCodeBearer.__call__
+            log.warning(f"Unable to extract token from request. Error: {error}")
+            raise InvalidAuthException(
+                "Unable to extract token from request"
+            ) from error
 
     async def _extract_access_token(self, request: Request) -> str | None:
         """

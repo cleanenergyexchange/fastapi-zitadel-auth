@@ -202,6 +202,20 @@ async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
     assert response.json() == {"detail": "No access token provided"}
 
 
+async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that an exception during token extraction is handled."""
+    mocker.patch.object(
+        ZitadelAuth, "_extract_access_token", side_effect=ValueError("oops")
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token()},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+    assert response.json() == {"detail": "Unable to extract token from request"}
+
+
 async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
     """Test that a token header with an invalid algorithm is rejected."""
     async with AsyncClient(
