@@ -73,13 +73,15 @@ class TestOpenIdConfig:
         assert config.authorization_url == mock_openid_config["authorization_endpoint"]
         assert config.token_url == mock_openid_config["token_endpoint"]
         assert config.jwks_uri == mock_openid_config["jwks_uri"]
+        assert isinstance(config.cache_duration_minutes, int)
         assert len(config.signing_keys) == 2
         assert all(
             isinstance(key, RSAPublicKey) for key in config.signing_keys.values()
         )
 
+    @pytest.mark.parametrize("cache_duration_minutes", [1, 5, 10, 30, 60, 120])
     async def test_caching_behavior(
-        self, respx_mock, mock_openid_config, mock_jwks, freezer
+        self, cache_duration_minutes, respx_mock, mock_openid_config, mock_jwks, freezer
     ):
         """Test that config is cached and only refreshed after expiry"""
         config_url = openid_config_url()
@@ -89,25 +91,39 @@ class TestOpenIdConfig:
             authorization_url="",
             token_url="",
             jwks_uri="",
+            cache_duration_minutes=cache_duration_minutes,
         )
 
-        respx_mock.get(config_url).respond(json=mock_openid_config)
-        respx_mock.get(mock_openid_config["jwks_uri"]).respond(json=mock_jwks)
+        initial_config_request = respx_mock.get(config_url).respond(
+            json=mock_openid_config
+        )
+        initial_jwks_request = respx_mock.get(mock_openid_config["jwks_uri"]).respond(
+            json=mock_jwks
+        )
 
-        freezer.move_to("2025-02-05 18:00:00")
+        # Load config and keys at a fixed time
+        start_datetime = datetime(2025, 2, 5, 18, 0, 0)
+        freezer.move_to(start_datetime)
         await config.load_config()
         initial_refresh = config.last_refresh_timestamp
+        assert initial_config_request.call_count == 1
+        assert initial_jwks_request.call_count == 1
 
-        freezer.move_to("2025-02-05 18:30:00")  # 30 min later
+        # Move time forward by a minute
+        freezer.move_to(start_datetime + timedelta(minutes=1))
         await config.load_config()  # Should use cached config
         assert (
             config.last_refresh_timestamp == initial_refresh
         )  # Timestamp shouldn't change for cache hit
+        assert initial_config_request.call_count == 1  # Should not have changed
+        assert initial_jwks_request.call_count == 1  # Should not have changed
 
-        # Set last_refresh_timestamp to 2 hours ago
-        config.last_refresh_timestamp = datetime.now() - timedelta(hours=2)
+        # Move time forward past cache expiration
+        freezer.move_to(start_datetime + timedelta(minutes=cache_duration_minutes + 1))
         await config.load_config()  # Should refresh
         assert config.last_refresh_timestamp > initial_refresh
+        assert initial_config_request.call_count == 2  # Should have refreshed
+        assert initial_jwks_request.call_count == 2  # Should have refreshed
 
     async def test_key_filtering(self, respx_mock, mock_openid_config):
         """Test that invalid keys are filtered out"""

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from jwt import PyJWK
 from httpx import AsyncClient
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PositiveInt
 
 from fastapi_zitadel_auth.exceptions import InvalidAuthException
 
@@ -21,7 +21,7 @@ class OpenIdConfig(BaseModel):
     jwks_uri: str
     signing_keys: dict[str, RSAPublicKey] = {}
     last_refresh_timestamp: datetime | None = None
-    cache_duration_minutes: int = 60
+    cache_duration_minutes: PositiveInt = 60
 
     async def load_config(self) -> None:
         """
