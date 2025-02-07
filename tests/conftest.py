@@ -47,7 +47,7 @@ def openid_configuration() -> dict:
     """OpenID configuration fixture"""
     zitadel_host = zitadel_issuer()
     return {
-        "issuer_url": zitadel_host,
+        "issuer": zitadel_host,
         "authorization_endpoint": f"{zitadel_host}/oauth/v2/authorize",
         "token_endpoint": f"{zitadel_host}/oauth/v2/token",
         "introspection_endpoint": f"{zitadel_host}/oauth/v2/introspect",

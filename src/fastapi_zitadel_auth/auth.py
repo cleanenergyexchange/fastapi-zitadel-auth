@@ -21,7 +21,14 @@ from pydantic import HttpUrl
 from starlette.requests import Request
 
 from .exceptions import InvalidAuthException
-from .user import ClaimsT, DefaultZitadelClaims, DefaultZitadelUser, UserT
+from .user import (
+    ClaimsT,
+    DefaultZitadelClaims,
+    DefaultZitadelUser,
+    UserT,
+    BaseZitadelClaims,
+    BaseZitadelUser,
+)
 from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
@@ -80,6 +87,12 @@ class ZitadelAuth(SecurityBase):
         self.issuer_url = str(issuer_url).rstrip("/")
         self.token_leeway = token_leeway
 
+        if not issubclass(claims_model, BaseZitadelClaims):
+            raise ValueError("claims_model must be a subclass of BaseZitadelClaims")
+
+        if not issubclass(user_model, BaseZitadelUser):
+            raise ValueError("user_model must be a subclass of BaseZitadelUser")
+
         self.claims_model = claims_model
         self.user_model = user_model
 
@@ -108,7 +121,7 @@ class ZitadelAuth(SecurityBase):
     ) -> UserT | None:
         """
         Extend the SecurityBase.__call__ method to validate the Zitadel OAuth2 token.
-        see also FastAPI -> "Advanced Dependency"
+        see also FastAPI -> "Advanced Dependency".
         """
         try:
             access_token = await self._extract_access_token(request)

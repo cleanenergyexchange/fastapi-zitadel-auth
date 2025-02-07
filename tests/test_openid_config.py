@@ -14,7 +14,7 @@ from tests.utils import valid_key, zitadel_issuer, openid_config_url
 def mock_openid_config():
     """Fixture providing mock OpenID configuration data."""
     return {
-        "issuer_url": zitadel_issuer(),
+        "issuer": zitadel_issuer(),
         "authorization_endpoint": f"{zitadel_issuer()}/oauth/v2/authorize",
         "token_endpoint": f"{zitadel_issuer()}/oauth/v2/token",
         "jwks_uri": f"{zitadel_issuer()}/oauth/v2/keys",
@@ -69,7 +69,7 @@ class TestOpenIdConfig:
 
         await config.load_config()
 
-        assert config.issuer_url == mock_openid_config["issuer_url"]
+        assert config.issuer_url == mock_openid_config["issuer"]
         assert config.authorization_url == mock_openid_config["authorization_endpoint"]
         assert config.token_url == mock_openid_config["token_endpoint"]
         assert config.jwks_uri == mock_openid_config["jwks_uri"]

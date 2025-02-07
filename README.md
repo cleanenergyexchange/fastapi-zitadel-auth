@@ -182,7 +182,7 @@ Make sure you have a running server at `http://localhost:8001`.
 
 ## Development
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development instructions.
+See [docs/contributing.md](docs/contributing.md) for development instructions.
 
 ## License
 

@@ -67,7 +67,7 @@ class OpenIdConfig(BaseModel):
             config = openid_response.json()
 
             # Update config values
-            self.issuer_url = config["issuer_url"]
+            self.issuer_url = config["issuer"]
             self.authorization_url = config["authorization_endpoint"]
             self.token_url = config["token_endpoint"]
             self.jwks_uri = config["jwks_uri"]
