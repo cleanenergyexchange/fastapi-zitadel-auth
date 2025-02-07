@@ -13,9 +13,7 @@ class Settings(BaseSettings):
     ZITADEL_PROJECT_ID: str
     OAUTH_CLIENT_ID: str
 
-    model_config = SettingsConfigDict(
-        env_file="demo_project/.env", env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file="demo_project/.env", env_file_encoding="utf-8")
 
 
 @lru_cache

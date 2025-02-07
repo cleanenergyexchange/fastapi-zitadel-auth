@@ -63,9 +63,7 @@ async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {
-            "detail": "Unable to verify token, no signing keys found"
-        }
+        assert response.json() == {"detail": "Unable to verify token, no signing keys found"}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -87,10 +85,7 @@ async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={
-            "Authorization": "Bearer "
-            + create_test_token(role="admin", invalid_iss=True)
-        },
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", invalid_iss=True)},
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
@@ -103,10 +98,7 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={
-            "Authorization": "Bearer "
-            + create_test_token(role="admin", invalid_aud=True)
-        },
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", invalid_aud=True)},
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
@@ -123,9 +115,7 @@ async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_key
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {
-            "detail": "Unable to verify token, no signing keys found"
-        }
+        assert response.json() == {"detail": "Unable to verify token, no signing keys found"}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -134,10 +124,7 @@ async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={
-            "Authorization": "Bearer "
-            + create_test_token(scopes="openid email profile")
-        },
+        headers={"Authorization": "Bearer " + create_test_token(scopes="openid email profile")},
     ) as ac:
         response = await ac.get("/api/protected/scope")
     assert response.status_code == 401
@@ -178,9 +165,7 @@ async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={
-            "Authorization": "Bearer " + create_test_token(role="admin", evil=True)
-        },
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", evil=True)},
     ) as ac:
         response = await ac.get("/api/protected/admin")
     assert response.status_code == 401
@@ -230,9 +215,7 @@ async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
 
 async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker):
     """Test that an exception during token extraction is handled."""
-    mocker.patch.object(
-        ZitadelAuth, "_extract_access_token", side_effect=ValueError("oops")
-    )
+    mocker.patch.object(ZitadelAuth, "_extract_access_token", side_effect=ValueError("oops"))
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -297,9 +280,7 @@ async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, free
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 200
 
-    freezer.move_to(
-        datetime.now() + timedelta(hours=3)
-    )  # The keys fetched are now outdated
+    freezer.move_to(datetime.now() + timedelta(hours=3))  # The keys fetched are now outdated
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -308,7 +289,5 @@ async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, free
     ) as ac:
         second_response = await ac.get("/api/protected/admin")
         assert second_response.status_code == 401
-        assert second_response.json() == {
-            "detail": "Unable to verify token, no signing keys found"
-        }
+        assert second_response.json() == {"detail": "Unable to verify token, no signing keys found"}
         assert second_response.headers["WWW-Authenticate"] == "Bearer"

@@ -18,9 +18,7 @@ from tests.utils import zitadel_issuer
 @pytest.fixture(scope="module")
 def rsa_keys() -> tuple:
     """Generate RSA key pair"""
-    private_key = rsa.generate_private_key(
-        backend=default_backend(), public_exponent=65537, key_size=2048
-    )
+    private_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
     return private_key, public_key
 

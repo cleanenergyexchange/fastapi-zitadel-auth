@@ -83,8 +83,5 @@ class OpenIdConfig(BaseModel):
         self.signing_keys = {
             key["kid"]: PyJWK(key, "RS256").key
             for key in keys
-            if key.get("use") == "sig"
-            and key.get("alg") == "RS256"
-            and key.get("kty") == "RSA"
-            and "kid" in key
+            if key.get("use") == "sig" and key.get("alg") == "RS256" and key.get("kty") == "RSA" and "kid" in key
         }

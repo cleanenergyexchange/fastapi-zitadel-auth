@@ -36,9 +36,7 @@ def create_test_token(
     claims = {
         "aud": ["wrong-id"] if invalid_aud else ["123456789", "987654321"],
         "client_id": "123456789",
-        "exp": int((now - timedelta(hours=1)).timestamp())
-        if expired
-        else int((now + timedelta(hours=1)).timestamp()),
+        "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
         "iss": "wrong-issuer" if invalid_iss else zitadel_issuer(),
         "sub": "user123",
@@ -48,9 +46,7 @@ def create_test_token(
     }
 
     if role:
-        claims["urn:zitadel:iam:org:project:987654321:roles"] = {
-            role: {"role_id": zitadel_primary_domain()}
-        }
+        claims["urn:zitadel:iam:org:project:987654321:roles"] = {role: {"role_id": zitadel_primary_domain()}}
 
     # For evil token use the evil key but claim it's from the valid key
     signing_key = evil_key if evil else valid_key
@@ -102,12 +98,8 @@ def create_openid_keys(empty_keys: bool = False, no_valid_keys: bool = False) ->
         }
 
 
-valid_key = rsa.generate_private_key(
-    backend=default_backend(), public_exponent=65537, key_size=2048
-)
-evil_key = rsa.generate_private_key(
-    backend=default_backend(), public_exponent=65537, key_size=2048
-)
+valid_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
+evil_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 
 
 def openid_config_url() -> str:

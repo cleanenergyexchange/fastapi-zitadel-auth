@@ -51,9 +51,7 @@ def mock_jwks():
 class TestOpenIdConfig:
     """Test suite for OpenIdConfig class"""
 
-    async def test_successful_config_load(
-        self, respx_mock, mock_openid_config, mock_jwks
-    ):
+    async def test_successful_config_load(self, respx_mock, mock_openid_config, mock_jwks):
         """Test that OpenIdConfig loads config and keys correctly"""
         config_url = openid_config_url()
         config = OpenIdConfig(
@@ -75,14 +73,10 @@ class TestOpenIdConfig:
         assert config.jwks_uri == mock_openid_config["jwks_uri"]
         assert isinstance(config.cache_duration_minutes, int)
         assert len(config.signing_keys) == 2
-        assert all(
-            isinstance(key, RSAPublicKey) for key in config.signing_keys.values()
-        )
+        assert all(isinstance(key, RSAPublicKey) for key in config.signing_keys.values())
 
     @pytest.mark.parametrize("cache_duration_minutes", [1, 5, 10, 30, 60, 120])
-    async def test_caching_behavior(
-        self, cache_duration_minutes, respx_mock, mock_openid_config, mock_jwks, freezer
-    ):
+    async def test_caching_behavior(self, cache_duration_minutes, respx_mock, mock_openid_config, mock_jwks, freezer):
         """Test that config is cached and only refreshed after expiry"""
         config_url = openid_config_url()
         config = OpenIdConfig(
@@ -94,12 +88,8 @@ class TestOpenIdConfig:
             cache_duration_minutes=cache_duration_minutes,
         )
 
-        initial_config_request = respx_mock.get(config_url).respond(
-            json=mock_openid_config
-        )
-        initial_jwks_request = respx_mock.get(mock_openid_config["jwks_uri"]).respond(
-            json=mock_jwks
-        )
+        initial_config_request = respx_mock.get(config_url).respond(json=mock_openid_config)
+        initial_jwks_request = respx_mock.get(mock_openid_config["jwks_uri"]).respond(json=mock_jwks)
 
         # Load config and keys at a fixed time
         start_datetime = datetime(2025, 2, 5, 18, 0, 0)
@@ -112,9 +102,7 @@ class TestOpenIdConfig:
         # Move time forward by a minute
         freezer.move_to(start_datetime + timedelta(minutes=1))
         await config.load_config()  # Should use cached config
-        assert (
-            config.last_refresh_timestamp == initial_refresh
-        )  # Timestamp shouldn't change for cache hit
+        assert config.last_refresh_timestamp == initial_refresh  # Timestamp shouldn't change for cache hit
         assert initial_config_request.call_count == 1  # Should not have changed
         assert initial_jwks_request.call_count == 1  # Should not have changed
 

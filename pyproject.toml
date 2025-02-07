@@ -70,3 +70,6 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 console_output_style = "classic"
 env_files = ["tests/.env.test"]
+
+[tool.ruff]
+line-length = 120

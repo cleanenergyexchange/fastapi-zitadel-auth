@@ -68,9 +68,7 @@ async def main():
         }
 
         # Making a POST request to the OAuth2 token endpoint
-        response = await client.post(
-            url=f"{settings.ZITADEL_HOST}oauth/v2/token", data=data
-        )
+        response = await client.post(url=f"{settings.ZITADEL_HOST}oauth/v2/token", data=data)
 
         # Handling the response
         response.raise_for_status()

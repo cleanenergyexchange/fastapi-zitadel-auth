@@ -77,9 +77,7 @@ class TestZitadelAuth:
 
     def test_invalid_claims_model(self):
         """Test initialization with invalid claims model"""
-        with pytest.raises(
-            ValueError, match="claims_model must be a subclass of BaseZitadelClaims"
-        ):
+        with pytest.raises(ValueError, match="claims_model must be a subclass of BaseZitadelClaims"):
             ZitadelAuth(
                 claims_model=InvalidClaims,  # type: ignore
                 issuer_url=zitadel_issuer(),
@@ -92,9 +90,7 @@ class TestZitadelAuth:
 
     def test_invalid_user_model(self):
         """Test initialization with invalid user model"""
-        with pytest.raises(
-            ValueError, match="user_model must be a subclass of BaseZitadelUser"
-        ):
+        with pytest.raises(ValueError, match="user_model must be a subclass of BaseZitadelUser"):
             ZitadelAuth(
                 user_model=InvalidUser,  # type: ignore
                 issuer_url=zitadel_issuer(),

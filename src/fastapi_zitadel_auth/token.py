@@ -13,9 +13,7 @@ class TokenValidator:
     """Handles JWT token validation and parsing"""
 
     @staticmethod
-    def validate_scopes(
-        claims: dict[str, Any], required_scopes: list[str] | None
-    ) -> bool:
+    def validate_scopes(claims: dict[str, Any], required_scopes: list[str] | None) -> bool:
         """
         Validates that the token has the required scopes
         """
@@ -32,10 +30,7 @@ class TokenValidator:
         # Check if all required scopes are present
         for required_scope in required_scopes:
             if required_scope not in token_scopes:
-                log.debug(
-                    f"Missing required scope: {required_scope}. "
-                    f"Available scopes: {token_scopes}"
-                )
+                log.debug(f"Missing required scope: {required_scope}. Available scopes: {token_scopes}")
                 raise InvalidAuthException(f"Missing required scope: {required_scope}")
         return True
 

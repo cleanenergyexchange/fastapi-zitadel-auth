@@ -41,9 +41,7 @@ def valid_claims_data() -> dict:
 def valid_claims_with_project_roles(valid_claims_data):
     """Fixture providing claims data with Zitadel project roles."""
     data = valid_claims_data.copy()
-    data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {
-        role_key: {role_id: zitadel_primary_domain()}
-    }
+    data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {role_key: {role_id: zitadel_primary_domain()}}
     return data
 
 
@@ -98,14 +96,10 @@ class TestDefaultZitadelClaims:
     def test_different_project_roles(self, valid_claims_data):
         """Test extraction of project roles with different role values."""
         data = valid_claims_data.copy()
-        data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {
-            "role2": {"123456789": zitadel_primary_domain()}
-        }
+        data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {"role2": {"123456789": zitadel_primary_domain()}}
 
         claims = DefaultZitadelClaims(**data)
-        assert claims.project_roles == {
-            "role2": {"123456789": zitadel_primary_domain()}
-        }
+        assert claims.project_roles == {"role2": {"123456789": zitadel_primary_domain()}}
 
 
 class TestDefaultZitadelUser:

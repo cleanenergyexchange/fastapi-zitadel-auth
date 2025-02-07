@@ -35,9 +35,7 @@ def test_no_token(public_client, path):
 )
 def test_incorrect_token(public_client, path):
     """Test that protected endpoints return 401 when an incorrect token is provided"""
-    response = public_client.get(
-        path, headers={"Authorization": "Non-existent testtoken"}
-    )
+    response = public_client.get(path, headers={"Authorization": "Non-existent testtoken"})
     assert response.status_code == 401, response.text
     assert response.json() == {"detail": "Not authenticated"}
 

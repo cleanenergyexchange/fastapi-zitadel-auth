@@ -116,9 +116,7 @@ class ZitadelAuth(SecurityBase):
         self.model = self.oauth.model
         self.scheme_name = self.oauth.scheme_name
 
-    async def __call__(
-        self, request: Request, security_scopes: SecurityScopes
-    ) -> UserT | None:
+    async def __call__(self, request: Request, security_scopes: SecurityScopes) -> UserT | None:
         """
         Extend the SecurityBase.__call__ method to validate the Zitadel OAuth2 token.
         see also FastAPI -> "Advanced Dependency".
@@ -128,20 +126,14 @@ class ZitadelAuth(SecurityBase):
             if access_token is None:
                 raise InvalidAuthException("No access token provided")
 
-            unverified_header, unverified_claims = (
-                self.token_validator.parse_unverified_token(access_token)
-            )
+            unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
             self.token_validator.validate_header(unverified_header)
-            self.token_validator.validate_scopes(
-                unverified_claims, security_scopes.scopes
-            )
+            self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
 
             await self.openid_config.load_config()
 
             try:
-                signing_key = self.openid_config.get_signing_key(
-                    unverified_header["kid"]
-                )
+                signing_key = self.openid_config.get_signing_key(unverified_header["kid"])
                 if signing_key is not None:
                     verified_claims = self.token_validator.verify(
                         token=access_token,
@@ -190,9 +182,7 @@ class ZitadelAuth(SecurityBase):
         except Exception as error:
             # Failsafe in case of error in OAuth2AuthorizationCodeBearer.__call__
             log.warning(f"Unable to extract token from request. Error: {error}")
-            raise InvalidAuthException(
-                "Unable to extract token from request"
-            ) from error
+            raise InvalidAuthException("Unable to extract token from request") from error
 
     async def _extract_access_token(self, request: Request) -> str | None:
         """
