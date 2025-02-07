@@ -32,7 +32,7 @@ class TokenValidator:
         # Check if all required scopes are present
         for required_scope in required_scopes:
             if required_scope not in token_scopes:
-                log.warning(
+                log.debug(
                     f"Missing required scope: {required_scope}. "
                     f"Available scopes: {token_scopes}"
                 )
@@ -75,7 +75,7 @@ class TokenValidator:
             "verify_iss": True,
             "verify_sub": True,
             "verify_jti": True,
-            "require": ["exp", "aud", "iat", "nbf", "sub", "iss", "jti"],
+            "require": ["exp", "nbf", "iat", "aud", "iss", "sub", "jti"],
         }
         return jwt.decode(
             token,
