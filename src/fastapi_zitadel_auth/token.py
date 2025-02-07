@@ -4,7 +4,7 @@ from typing import Any
 import jwt
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
+from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 
 log = logging.getLogger("fastapi_zitadel_auth")
 
@@ -24,14 +24,14 @@ class TokenValidator:
         token_scope_str = claims.get("scope", "")
         if not isinstance(token_scope_str, str):
             log.warning("Invalid scope format: %s", token_scope_str)
-            raise InvalidAuthException("Token contains invalid formatted scopes")
+            raise UnauthorizedException("Token contains invalid formatted scopes")
         token_scopes = token_scope_str.split()
 
         # Check if all required scopes are present
         for required_scope in required_scopes:
             if required_scope not in token_scopes:
                 log.debug(f"Missing required scope: {required_scope}. Available scopes: {token_scopes}")
-                raise InvalidAuthException(f"Missing required scope: {required_scope}")
+                raise ForbiddenException(f"Missing required scope: {required_scope}")
         return True
 
     @staticmethod
@@ -50,13 +50,13 @@ class TokenValidator:
                 e,
                 exc_info=True,
             )
-            raise InvalidAuthException("Invalid token format") from e
+            raise UnauthorizedException("Invalid token format") from e
 
     @staticmethod
     def validate_header(header: dict[str, Any]) -> None:
         """Validate token header"""
         if header.get("alg") != "RS256" or header.get("typ") != "JWT":
-            raise InvalidAuthException("Invalid token header")
+            raise UnauthorizedException("Invalid token header")
 
     @staticmethod
     def verify(

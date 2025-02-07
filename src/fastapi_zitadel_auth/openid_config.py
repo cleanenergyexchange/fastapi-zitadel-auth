@@ -6,7 +6,7 @@ from jwt import PyJWK
 from httpx import AsyncClient
 from pydantic import BaseModel, ConfigDict, PositiveInt
 
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
+from fastapi_zitadel_auth.exceptions import UnauthorizedException
 
 log = logging.getLogger("fastapi_zitadel_auth")
 
@@ -34,7 +34,7 @@ class OpenIdConfig(BaseModel):
                 self.last_refresh_timestamp = datetime.now()
             except Exception as error:
                 log.error("Error fetching OpenID config: %s", error)
-                raise InvalidAuthException(
+                raise UnauthorizedException(
                     "Connection to Zitadel is down. Unable to fetch provider configuration"
                 ) from error
 

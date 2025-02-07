@@ -5,7 +5,7 @@ FastAPI dependencies
 from fastapi import Depends
 
 from fastapi_zitadel_auth import ZitadelAuth
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
+from fastapi_zitadel_auth.exceptions import ForbiddenException
 from fastapi_zitadel_auth.user import DefaultZitadelUser
 
 try:
@@ -37,4 +37,4 @@ async def validate_is_admin_user(
     """Validate that the authenticated user is a user with a specific role"""
     required_role = "admin"
     if required_role not in user.claims.project_roles.keys():
-        raise InvalidAuthException(f"User does not have role assigned: {required_role}")
+        raise ForbiddenException(f"User does not have role assigned: {required_role}")

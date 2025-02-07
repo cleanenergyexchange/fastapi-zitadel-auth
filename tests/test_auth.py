@@ -63,7 +63,9 @@ async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Unable to verify token, no signing keys found"}
+        assert response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
+        }
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -75,8 +77,10 @@ async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
         headers={"Authorization": "Bearer " + create_test_token(role="user")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-        assert response.status_code == 401
-        assert response.json() == {"detail": "User does not have role assigned: admin"}
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": {"error": "insufficient_scope", "message": "User does not have role assigned: admin"}
+        }
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -89,7 +93,7 @@ async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Token contains invalid claims"}
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Token contains invalid claims"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -102,7 +106,7 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Token contains invalid claims"}
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Token contains invalid claims"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -115,7 +119,9 @@ async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_key
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Unable to verify token, no signing keys found"}
+        assert response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
+        }
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -127,8 +133,8 @@ async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
         headers={"Authorization": "Bearer " + create_test_token(scopes="openid email profile")},
     ) as ac:
         response = await ac.get("/api/protected/scope")
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Missing required scope: scope1"}
+    assert response.status_code == 403
+    assert response.json() == {"detail": {"error": "insufficient_scope", "message": "Missing required scope: scope1"}}
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -143,7 +149,9 @@ async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/scope")
     assert response.status_code == 401
-    assert response.json() == {"detail": "Token contains invalid formatted scopes"}
+    assert response.json() == {
+        "detail": {"error": "invalid_token", "message": "Token contains invalid formatted scopes"}
+    }
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -156,7 +164,7 @@ async def test_expired_token(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/scope")
     assert response.status_code == 401
-    assert response.json() == {"detail": "Token signature has expired"}
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Token signature has expired"}}
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -169,7 +177,7 @@ async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unable to validate token"}
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Unable to validate token"}}
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -182,8 +190,7 @@ async def test_malformed_token(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
     assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid token format"}
-    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token format"}}
 
 
 async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
@@ -195,7 +202,8 @@ async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
         headers={"Authorization": "Bearer " + create_test_token(role="admin")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-    assert response.json() == {"detail": "No access token provided"}
+        assert response.status_code == 400
+        assert response.json() == {"detail": {"error": "invalid_request", "message": "No access token provided"}}
 
 
 async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
@@ -222,9 +230,10 @@ async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker
         headers={"Authorization": "Bearer " + create_test_token(role="admin")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-        assert response.status_code == 401
-        assert response.json() == {"detail": "Unable to extract token from request"}
-        assert response.headers["WWW-Authenticate"] == "Bearer"
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": {"error": "invalid_request", "message": "Unable to extract token from request"}
+        }
 
 
 async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
@@ -236,7 +245,7 @@ async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Invalid token header"}
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token header"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -249,7 +258,7 @@ async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Invalid token header"}
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token header"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
@@ -263,11 +272,10 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Unable to process token"}
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Unable to process token"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-@pytest.mark.anyio
 async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, freezer):
     """
     Test that the keys are fetched again if the current keys are outdated.
@@ -289,5 +297,7 @@ async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, free
     ) as ac:
         second_response = await ac.get("/api/protected/admin")
         assert second_response.status_code == 401
-        assert second_response.json() == {"detail": "Unable to verify token, no signing keys found"}
+        assert second_response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
+        }
         assert second_response.headers["WWW-Authenticate"] == "Bearer"

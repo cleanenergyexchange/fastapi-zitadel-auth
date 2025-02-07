@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
+from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 from fastapi_zitadel_auth.token import TokenValidator
 from tests.utils import zitadel_issuer
 
@@ -70,14 +70,14 @@ class TestTokenValidator:
             (
                 {"scope": "read:messages"},
                 ["write:messages"],
-                pytest.raises(InvalidAuthException),
+                pytest.raises(ForbiddenException),
             ),
-            ({"scope": ""}, ["read:messages"], pytest.raises(InvalidAuthException)),
-            ({}, ["read:messages"], pytest.raises(InvalidAuthException)),
+            ({"scope": ""}, ["read:messages"], pytest.raises(ForbiddenException)),
+            ({}, ["read:messages"], pytest.raises(ForbiddenException)),
             (
                 {"scope": "read:messages write:messages"},
                 ["read:messages", "delete:messages"],
-                pytest.raises(InvalidAuthException),
+                pytest.raises(ForbiddenException),
             ),
             # Test with multiple space-separated allowed_scopes
             ({"scope": "scope1 scope2 scope3"}, ["scope2"], True),
@@ -110,7 +110,7 @@ class TestTokenValidator:
     )
     def test_validate_scopes_invalid_type(self, claims):
         """Test scope validation with invalid scope types"""
-        with pytest.raises(InvalidAuthException):
+        with pytest.raises(UnauthorizedException):
             TokenValidator.validate_scopes(claims, ["read:messages"])
 
     def test_validate_scopes_whitespace_handling(self):
@@ -151,7 +151,7 @@ class TestTokenValidator:
 
     def test_parse_unverified_none_token(self, token_validator):
         """Test that the TokenValidator raises an exception when parsing a None token"""
-        with pytest.raises(InvalidAuthException, match="Invalid token format"):
+        with pytest.raises(UnauthorizedException, match="Invalid token format"):
             token_validator.parse_unverified_token(None)  # type: ignore
 
     @pytest.mark.parametrize(
@@ -175,7 +175,7 @@ class TestTokenValidator:
     )
     def test_parse_unverified_invalid_token(self, token_validator, invalid_token):
         """Test that the TokenValidator raises an exception when parsing an invalid token"""
-        with pytest.raises(InvalidAuthException, match="Invalid token format"):
+        with pytest.raises(UnauthorizedException, match="Invalid token format"):
             token_validator.parse_unverified_token(invalid_token)
 
     def test_verify_valid_token(self, token_validator, valid_token, rsa_keys):

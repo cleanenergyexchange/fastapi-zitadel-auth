@@ -72,7 +72,7 @@ from fastapi import FastAPI, Request, Security, Depends
 from pydantic import HttpUrl
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import DefaultZitadelUser
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
+from fastapi_zitadel_auth.exceptions import ForbiddenException
 
 # Define your project ID, client ID - get them from Zitadel console
 CLIENT_ID = 'your-zitadel-client-id'
@@ -97,7 +97,7 @@ zitadel_auth = ZitadelAuth(
 async def validate_is_admin_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
     required_role = "admin"
     if required_role not in user.claims.project_roles.keys():
-        raise InvalidAuthException(f"User does not have role assigned: {required_role}")
+        raise ForbiddenException(f"User does not have role assigned: {required_role}")
 
 
 # Load OpenID configuration at startup

@@ -29,7 +29,13 @@ async def test_http_error_old_config_found(respx_mock):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Connection to Zitadel is down. Unable to fetch provider configuration"}
+        assert response.json() == {
+            "detail": {
+                "error": "invalid_token",
+                "message": "Connection to Zitadel is down. Unable to fetch provider configuration",
+            }
+        }
+        assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 async def test_http_error_no_initial_connection(respx_mock):
@@ -45,4 +51,10 @@ async def test_http_error_no_initial_connection(respx_mock):
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Connection to Zitadel is down. Unable to fetch provider configuration"}
+        assert response.json() == {
+            "detail": {
+                "error": "invalid_token",
+                "message": "Connection to Zitadel is down. Unable to fetch provider configuration",
+            }
+        }
+        assert response.headers["WWW-Authenticate"] == "Bearer"

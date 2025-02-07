@@ -20,7 +20,7 @@ from jwt import (
 from pydantic import HttpUrl
 from starlette.requests import Request
 
-from .exceptions import InvalidAuthException
+from .exceptions import UnauthorizedException, InvalidRequestException, ForbiddenException
 from .user import (
     ClaimsT,
     DefaultZitadelClaims,
@@ -124,7 +124,7 @@ class ZitadelAuth(SecurityBase):
         try:
             access_token = await self._extract_access_token(request)
             if access_token is None:
-                raise InvalidAuthException("No access token provided")
+                raise InvalidRequestException("No access token provided")
 
             unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
             self.token_validator.validate_header(unverified_header)
@@ -158,31 +158,31 @@ class ZitadelAuth(SecurityBase):
                 MissingRequiredClaimError,
             ) as error:
                 log.info(f"Token contains invalid claims: {error}")
-                raise InvalidAuthException("Token contains invalid claims") from error
+                raise UnauthorizedException("Token contains invalid claims") from error
 
             except ExpiredSignatureError as error:
                 log.info(f"Token signature has expired. {error}")
-                raise InvalidAuthException("Token signature has expired") from error
+                raise UnauthorizedException("Token signature has expired") from error
 
             except InvalidTokenError as error:
                 log.warning(f"Invalid token. Error: {error}", exc_info=True)
-                raise InvalidAuthException("Unable to validate token") from error
+                raise UnauthorizedException("Unable to validate token") from error
 
             except Exception as error:
                 # Extra failsafe in case of a bug in PyJWT
                 log.exception(f"Unable to process jwt token. Uncaught error: {error}")
-                raise InvalidAuthException("Unable to process token") from error
+                raise UnauthorizedException("Unable to process token") from error
 
             log.warning("Unable to verify token, no signing keys found")
-            raise InvalidAuthException("Unable to verify token, no signing keys found")
+            raise UnauthorizedException("Unable to verify token, no signing keys found")
 
-        except (InvalidAuthException, HTTPException):
+        except (UnauthorizedException, InvalidRequestException, ForbiddenException, HTTPException):
             raise
 
         except Exception as error:
             # Failsafe in case of error in OAuth2AuthorizationCodeBearer.__call__
             log.warning(f"Unable to extract token from request. Error: {error}")
-            raise InvalidAuthException("Unable to extract token from request") from error
+            raise InvalidRequestException("Unable to extract token from request") from error
 
     async def _extract_access_token(self, request: Request) -> str | None:
         """

@@ -24,6 +24,7 @@ def test_no_token(public_client, path):
     response = public_client.get(path)
     assert response.status_code == 401, response.text
     assert response.json() == {"detail": "Not authenticated"}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 @pytest.mark.parametrize(
@@ -38,6 +39,7 @@ def test_incorrect_token(public_client, path):
     response = public_client.get(path, headers={"Authorization": "Non-existent testtoken"})
     assert response.status_code == 401, response.text
     assert response.json() == {"detail": "Not authenticated"}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 @pytest.mark.parametrize(
@@ -51,4 +53,5 @@ def test_token_empty(public_client, path):
     """Test that protected endpoints return 401 when an empty token is provided"""
     response = public_client.get(path, headers={"Authorization": "Bearer "})
     assert response.status_code == 401, response.text
-    assert response.json() == {"detail": "Invalid token format"}
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token format"}}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
