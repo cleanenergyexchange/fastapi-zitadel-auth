@@ -74,7 +74,7 @@ from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import DefaultZitadelUser
 from fastapi_zitadel_auth.exceptions import ForbiddenException
 
-# Define your project ID, client ID - get them from Zitadel console
+# IDs from Zitadel console, see documentation on how to set up Zitadel
 CLIENT_ID = 'your-zitadel-client-id'
 PROJECT_ID = 'your-zitadel-project-id'
 
