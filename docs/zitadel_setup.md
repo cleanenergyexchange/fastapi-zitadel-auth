@@ -1,94 +1,104 @@
 # Zitadel setup guide
 
-This guide walks you through setting up Zitadel authentication for your FastAPI application using `fastapi-zitadel-auth`. It covers configuring:
-- OAuth2 project settings
-- API application for service authentication
-- User Agent application for Swagger UI integration
-- User and service user permissions
+This guide walks you through setting up Zitadel authentication for your FastAPI application using `fastapi-zitadel-auth`. It covers:
+- OAuth2 project configuration
+- Service authentication via API application
+- User authentication via Swagger UI
+- User and service account permissions
 
 > [!IMPORTANT]
-> This guide is an opinionated setup for a demo application.
-> It is recommended to run through it exactly as described.
-> Only later adjust the settings to fit your use case.
+> This is an opinionated setup for a demo application.
+> Follow the steps exactly as described first.
+> Adjust settings for your use case only after a successful implementation.
 
 
-## Project configuration
+## Project Configuration
 
-Head over to the Zitadel console for your instance and create a new project to host the demo application.
+In your Zitadel console:
 
-1. Create **new project**, name it e.g. `Demo project`
-2. After saving, in the project overview, under **General**:
-   - [x] **Assert Roles on Authentication**
-   - [x] **Check authorization on Authentication**
-3. Under **Roles**, create a **new role** (e.g., key = `admin`) and assign to project
-4. In the project overview, record the **project ID** ("resource Id" in the portal). This will be the `ZitadelAuth` object's `project_id` in the FastAPI app.
-
+1. Create **New Project**, named `Demo project`
+2. After saving, in the project overview, under **General**, enable:
+   - **Assert Roles on Authentication**
+   - **Check authorization on Authentication**
+3. Under **Roles**, create a **new role** (e.g., key = `admin`)
+4. Record the **Project Id** ("Resource Id") from the project overview. You'll need this for the `ZitadelAuth` object's `project_id` parameter.
 
 ## Applications
 
-For the created project, we will create two applications:
+The project requires two applications:
+1. An API application for service-to-service authentication
+2. A User Agent application for human authentication via Swagger UI
+
 
 ### Application 1: API
 
-Let's create the API application for service authentication.
+Create an API application for service authentication:
 
-1. In the project overview, create a **new application**:
+1. In the project overview, create a **New Application**:
    - Type: **API**
-   - Name it e.g. `Demo API`
+   - Name: `Demo API` (or your preferred name)
    - Authentication Method: **Private Key JWT**
-2. After saving, in the app overview under **URLs**, record the **Issuer** (e.g., `https://myinstance.zitadel.cloud`).
-This will be the `ZitadelAuth` object's `issuer_url` in the FastAPI app.
+
+2. After saving, record the **Issuer URL** from the app overview under **URLs**
+(e.g., `https://myinstance.zitadel.cloud`).
+You'll need this for the `ZitadelAuth` object's `issuer_url` parameter.
 
 
-### Application 2: user agent
+### Application 2: User Agent
 
-We will create a User Agent application so that Swagger UI can authenticate users.
+Create a User Agent application to enable Swagger UI authentication:
 
-1. In the project overview, create a **new application**:
+1. In the project overview, create a **New Application**:
    - Type: **User Agent**
-   - Name it e.g. `Swagger UI`
+   - Name: `Swagger UI` (or your preferred name)
    - Authentication Method: **PKCE**
    - **Redirect URI:** `http://localhost:8001/oauth2-redirect` (or your FastAPI app URL + `/oauth2-redirect`)
-   - Toggle **Development Mode** (for non-HTTPS redirects)
+   - Toggle **Development Mode** for non-HTTPS redirects
+
 2. After saving, go to the app's **Token Settings**:
    - Set "Auth Token Type" to **JWT**
-   - [x] **Add user roles to access token**
-   - [x] **User roles inside ID token**
-3. In the app overview record the **client Id**. This will be the `ZitadelAuth` object's `app_client_id` in the FastAPI app.
+   - Enable **Add user roles to access token**
+   - Enable **User roles inside ID token**
+
+3. Record the **client Id** from the overview. You'll need this for the
+  `ZitadelAuth` object's `app_client_id` parameter.
 
 
 ## Users
 
-In the Zitadel console, we'll create two users, both with the same role (e.g. `admin`) assigned.
-A human user and a service user (machine account) will be created
-(see here for [Zitadel user types](https://zitadel.com/docs/guides/manage/console/users)).
+Create two user accounts with the `admin` role (or your chosen role):
+- A human user for interactive access
+- A service user for automated processes
 
+For more information, see [Zitadel user types](https://zitadel.com/docs/guides/manage/console/users).
 
+### User 1: Human User
 
+1. Create a **New User**:
+   - Name: `Admin User` (or your preferred name)
+   - Enable **Email Verified** for testing
 
-### User 1: human user
-
-1. Under **Users**, create a new **User**
-   - Name it e.g. `Admin User`.
-   - [x] Toggle **Email Verified** for testing purposes.
-2. After saving the user, under **Authorizations**:
+2. Under **Authorizations**:
    - Create new authorization
-   - Search for project name, e.g. "Demo project"
-   - Assign created role, e.g. `admin`
+   - Select your project (e.g., "Demo Project")
+   - Assign your role (e.g., `admin`)
 
 ### User 2: service user
 
-1. Under **Users**, create a new **Service User**
-    - Name the "User Name" e.g. `Admin Bot`
-    - Select "Access Token Type" to **JWT**
-2. After saving the user, under **Authorizations**:
-    - Create new authorization
-    - Search for project name, e.g. "Demo project"
-    - Assign created role, e.g. `admin`
-3. Under **Keys**, create a new key with type: **JSON**
-4. Download key file and keep it secure.
-5. To use this key in the `demo_project`, update the path to the key file in `demo_project/service_user.py`.
+1. Create a **New Service User**:
+   - Username: `Admin Bot` (or your preferred name)
+   - Access Token Type: **JWT**
 
+2. Under **Authorizations**:
+   - Create new authorization
+   - Select your project (e.g., "Demo Project")
+   - Assign your role (e.g., `admin`)
 
-Now you have set up the project, applications, and users for the demo application so you should
-be able to authenticate with the Service User and within the API docs page using Swagger.
+3. Under **Keys**:
+   - Create a new **JSON** key
+   - Download and secure the key file
+   - Update the key file path in `demo_project/service_user.py`
+
+After completing these steps, you should be able to:
+- Authenticate using the service user
+- Access the API documentation via Swagger UI with human user authentication
