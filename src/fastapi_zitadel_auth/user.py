@@ -7,11 +7,11 @@ from typing import (
 from pydantic import BaseModel, Field, model_validator
 
 # Generic type variables for claims and user models
-ClaimsT = TypeVar("ClaimsT", bound="BaseZitadelClaims")
+ClaimsT = TypeVar("ClaimsT", bound="JwtClaims")
 UserT = TypeVar("UserT", bound="BaseZitadelUser[Any]")
 
 
-class BaseZitadelClaims(BaseModel):
+class JwtClaims(BaseModel):
     """Base model for JWT access token claims in Zitadel
     as per RFC 7519 and Zitadel
     """
@@ -33,7 +33,7 @@ class BaseZitadelUser(BaseModel, Generic[ClaimsT]):
     access_token: str
 
 
-class DefaultZitadelClaims(BaseZitadelClaims):
+class DefaultZitadelClaims(JwtClaims):
     """Default Zitadel claims implementation with project roles"""
 
     project_roles: dict[str, dict[str, str]] = Field(

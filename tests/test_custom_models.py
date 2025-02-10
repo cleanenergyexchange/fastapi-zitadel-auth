@@ -4,14 +4,14 @@ from pydantic import BaseModel
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import (
     BaseZitadelUser,
-    BaseZitadelClaims,
+    JwtClaims,
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
 from tests.utils import zitadel_issuer
 
 
-class CustomClaims(BaseZitadelClaims):
+class CustomClaims(JwtClaims):
     """Custom claims with additional fields"""
 
     custom_field: str
@@ -25,7 +25,7 @@ class CustomUser(BaseZitadelUser):
 
 
 class InvalidClaims(BaseModel):
-    """Claims class that doesn't inherit from BaseZitadelClaims"""
+    """Claims class that doesn't inherit from JwtClaims"""
 
     some_field: str
 
@@ -77,7 +77,7 @@ class TestZitadelAuth:
 
     def test_invalid_claims_model(self):
         """Test initialization with invalid claims model"""
-        with pytest.raises(ValueError, match="claims_model must be a subclass of BaseZitadelClaims"):
+        with pytest.raises(ValueError, match="claims_model must be a subclass of JwtClaims"):
             ZitadelAuth(
                 claims_model=InvalidClaims,  # type: ignore
                 issuer_url=zitadel_issuer(),

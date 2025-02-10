@@ -26,7 +26,7 @@ from .user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
     UserT,
-    BaseZitadelClaims,
+    JwtClaims,
     BaseZitadelUser,
 )
 from .openid_config import OpenIdConfig
@@ -87,8 +87,8 @@ class ZitadelAuth(SecurityBase):
         self.issuer_url = str(issuer_url).rstrip("/")
         self.token_leeway = token_leeway
 
-        if not issubclass(claims_model, BaseZitadelClaims):
-            raise ValueError("claims_model must be a subclass of BaseZitadelClaims")
+        if not issubclass(claims_model, JwtClaims):
+            raise ValueError("claims_model must be a subclass of JwtClaims")
 
         if not issubclass(user_model, BaseZitadelUser):
             raise ValueError("user_model must be a subclass of BaseZitadelUser")

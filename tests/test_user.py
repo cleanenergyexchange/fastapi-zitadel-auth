@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from fastapi_zitadel_auth.user import (
-    BaseZitadelClaims,
+    JwtClaims,
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
@@ -46,14 +46,14 @@ def valid_claims_with_project_roles(valid_claims_data):
 
 
 class TestBaseZitadelClaims:
-    """Test suite for BaseZitadelClaims model."""
+    """Test suite for JwtClaims model."""
 
     @pytest.mark.parametrize("aud", [[project_id], ["audience1", "audience2"]])
     def test_valid_audience_formats(self, valid_claims_data, aud):
         """Test that list audience formats are accepted."""
         data = valid_claims_data.copy()
         data["aud"] = aud
-        claims = BaseZitadelClaims(**data)
+        claims = JwtClaims(**data)
         assert claims.aud == aud
 
     def test_required_fields(self, valid_claims_data):
@@ -75,9 +75,9 @@ class TestBaseZitadelClaims:
 
             with pytest.raises(
                 ValidationError,
-                match=f"1 validation error for BaseZitadelClaims\n{field}\n  Field required",
+                match=f"1 validation error for JwtClaims\n{field}\n  Field required",
             ):
-                BaseZitadelClaims(**invalid_data)
+                JwtClaims(**invalid_data)
 
 
 class TestDefaultZitadelClaims:
