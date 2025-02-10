@@ -14,9 +14,12 @@ except ImportError:
     # ImportError handling since it's also used in tests
     from demo_project.settings import get_settings
 
-# UPDATE THIS VALUE ----------------------------------------------
+# UPDATE THESE VALUES ----------------------------------------------
 # The service account private key file downloaded from Zitadel
 SERVICE_USER_PRIVATE_KEY_FILE = "service_user.json"
+
+# The role that the service user should have in Zitadel
+ROLE = "admin"
 # ---------------------------------------------------------------
 
 # Loading the service account private key JSON file
@@ -58,9 +61,7 @@ async def main():
             "scope": " ".join(
                 [
                     "openid",
-                    "email",
-                    "profile",
-                    "urn:zitadel:iam:org:projects:roles",
+                    f"urn:zitadel:iam:org:project:role:{ROLE}",
                     f"urn:zitadel:iam:org:project:id:{settings.ZITADEL_PROJECT_ID}:aud",
                 ]
             ),
