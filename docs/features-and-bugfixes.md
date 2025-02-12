@@ -4,7 +4,7 @@ To contribute, follow these steps:
 
 1. Create **[an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues)** explaining what you want to add or fix.
 2. **Fork** the repository.
-3. Install [`uv`](https://docs.astral.sh/uv/) and **install the dependencies** with `uv install --dev`.
+3. Install [`uv`](https://docs.astral.sh/uv/) and **install the dependencies** with `uv sync --group dev`.
 4. Install **pre-commit hooks** with `uv run pre-commit install`.
 5. Create a **branch** for your feature or fix.
 6. Write code.
