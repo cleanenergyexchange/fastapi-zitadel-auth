@@ -22,7 +22,7 @@
 <a href="https://mypy-lang.org">
     <img src="https://www.mypy-lang.org/static/mypy_badge.svg" alt="mypy">
 </a>
-<a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENSE">
+<a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENCE">
     <img src="https://badgen.net/github/license/cleanenergyexchange/fastapi-zitadel-auth/" alt="License"/>
 </a>
 
@@ -45,11 +45,11 @@
 * Extensible claims and user models
 
 
-!!! info "JWT vs Opaque tokens"
 
-    This library implements JWT, locally validated using JWKS, as it **prioritizes performance**, 
-    see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs). 
-    If you need to validate opaque tokens using Introspection, please [open an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues) – PRs are welcome!
+> **Note:** This library implements JWT, locally validated using JWKS, as it prioritizes performance, 
+see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs). 
+If you need to validate opaque tokens using Introspection, 
+please [open an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues) – PRs are welcome!
 
 
 ## License
