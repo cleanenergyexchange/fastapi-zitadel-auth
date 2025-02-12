@@ -1,0 +1,78 @@
+site_name: FastAPI Zitadel Auth
+repo_url: https://github.com/cleanenergyexchange/fastapi-zitadel-auth
+repo_name: cleanenergyexchange/fastapi-zitadel-auth
+
+theme:
+  name: material
+  icon:
+    logo: material/shield-account
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-3
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-5
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+extra_css:
+  - css/extra.css
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - minify:
+      minify_html: true
+
+nav:
+  - Getting started:
+    - Welcome to fastapi-zitadel-auth: index.md
+    - Installation: installation.md
+    - Zitadel setup: zitadel-setup.md
+    - FastAPI configuration: fastapi-configuration.md
+  - Demo project: demo-project.md
+  - Usage:
+      - Custom claims and users: custom-claims-and-users.md
+  - Contributing:
+        - Features and bugfixes: features-and-bugfixes.md
+        - Documentation: writing-documentation.md

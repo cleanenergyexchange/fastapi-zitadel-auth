@@ -1,8 +1,11 @@
-# Custom Claims and Users
+# Custom claims and users
 
-The package supports customizing claims and user models for additional JWT claims or custom business logic.
+You can customize the claims and user model for your custom business logic.
 
-## Basic Usage
+To do so, extend the provided `JwtClaims` and `BaseZitadelUser` classes and pass them to the
+`ZitadelAuth` object during initialization.
+
+## Example usage
 
 ```python
 from pydantic import Field
@@ -39,7 +42,8 @@ auth = ZitadelAuth(
 ```
 
 
-> [!IMPORTANT]
-> If you check Zitadel project roles during authentication (as the default implementation does),
-> you should check the `DefaultZitadelClaims` implementation for the `project_roles` attribute
-> and Pydantic `model_validator` to load it from the JWT claims, see `user.py`.
+!!! note "Project roles"
+
+    If you check Zitadel project roles during authentication (as the default implementation does),
+    you should check the `DefaultZitadelClaims` implementation for the `project_roles` attribute
+    and Pydantic `model_validator` to load it from the JWT claims, see [`user.py`](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/src/fastapi_zitadel_auth/user.py).
