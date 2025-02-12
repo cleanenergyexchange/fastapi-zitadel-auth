@@ -1,362 +1,303 @@
 """
-Test the auth module
+Test the auth module with endpoint tests.
 """
 
 import time
+from datetime import datetime, timedelta
 
-import httpx
 import pytest
-import respx
-from fastapi.exceptions import HTTPException
-from fastapi.security import SecurityScopes
-from starlette.requests import Request
+from httpx import ASGITransport, AsyncClient
 
-from fastapi_zitadel_auth import AuthConfig, ZitadelAuth
-from fastapi_zitadel_auth.exceptions import InvalidAuthException
-from tests.utils import create_test_token
-
-
-async def test_valid_token(auth_config, mock_jwks, test_keys):
-    """
-    Test with a valid token
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        user = await auth(request, scopes)
-        assert user is not None
-        assert user.claims.sub == "user123"
-        assert user.claims.iss == "https://issuer.zitadel.cloud"
-        assert user.claims.aud == ["123456789", "987654321"]
-        assert user.claims.exp > int(time.time())
-        assert user.claims.iat == user.claims.nbf
-        assert user.access_token == token
-
-
-async def test_expired_token(auth_config, mock_jwks, test_keys):
-    """
-    Test with an expired token
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys, expired=True)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        with pytest.raises(InvalidAuthException, match="Token signature has expired"):
-            await auth(request, scopes)
+from demo_project.main import app
+from fastapi_zitadel_auth import ZitadelAuth
+from fastapi_zitadel_auth.token import TokenValidator
+from tests.utils import create_test_token, zitadel_primary_domain, zitadel_issuer
 
 
 @pytest.mark.asyncio
-async def test_invalid_scopes(auth_config, mock_jwks, test_keys):
-    """
-    Test with invalid scopes
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys, invalid_roles=True)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        with pytest.raises(InvalidAuthException, match="Not enough permissions"):
-            await auth(request, scopes)
-
-
-@pytest.mark.asyncio
-async def test_invalid_key_id(auth_config, mock_jwks, test_keys):
-    """
-    Test with an invalid key ID
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys, kid="wrong-kid")
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        with pytest.raises(InvalidAuthException, match="No valid signing key found"):
-            await auth(request, scopes)
-
-
-@pytest.mark.asyncio
-async def test_invalid_claims(auth_config, mock_jwks, test_keys):
-    """
-    Test with invalid claims
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys, invalid_claims=True)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        with pytest.raises(InvalidAuthException, match="Token contains invalid claims"):
-            await auth(request, scopes)
-
-
-@pytest.mark.asyncio
-async def test_evil_token(auth_config, mock_jwks, test_keys):
-    """
-    Test with an 'evil' token
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys, kid="test-key-1", evil=True)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        with pytest.raises(InvalidAuthException, match="Unable to validate token"):
-            await auth(request, scopes)
-
-
-@pytest.mark.parametrize(
-    "claims,required_scopes,expected_error",
-    [
-        # Valid case - has all required scopes
-        (
-            {
-                "urn:zitadel:iam:org:project:987654321:roles": {
-                    "system": True,
-                    "user": True,
-                }
+async def test_admin_user(fastapi_app, mock_openid_and_keys):
+    """Test that with a valid token we can access the protected endpoint."""
+    issued_at = int(time.time())
+    expires = issued_at + 3600
+    access_token = create_test_token(role="admin")
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {access_token}"},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 200, response.text
+        # see create_test_token for the claims
+        assert response.json() == {
+            "message": "Hello world!",
+            "user": {
+                "access_token": access_token,
+                "claims": {
+                    "aud": [
+                        "123456789",
+                        "987654321",
+                    ],
+                    "client_id": "123456789",
+                    "exp": expires,
+                    "iat": issued_at,
+                    "iss": zitadel_issuer(),
+                    "jti": "unique-token-id",
+                    "nbf": issued_at,
+                    "project_roles": {
+                        "admin": {
+                            "role_id": zitadel_primary_domain(),
+                        },
+                    },
+                    "sub": "user123",
+                },
             },
-            ["system", "user"],
-            None,
-        ),
-        # Missing permission claim entirely
-        ({"some_other_claim": "value"}, ["system"], "Invalid token structure"),
-        # Permission claim is not a dict
-        (
-            {"urn:zitadel:iam:org:project:987654321:roles": "not_a_dict"},
-            ["system"],
-            "Invalid token structure",
-        ),
-        # Missing required scope
-        (
-            {"urn:zitadel:iam:org:project:987654321:roles": {"user": True}},
-            ["system"],
-            "Not enough permissions",
-        ),
-        # Empty roles dict
-        (
-            {"urn:zitadel:iam:org:project:987654321:roles": {}},
-            ["system"],
-            "Not enough permissions",
-        ),
-        # Multiple required scopes, missing one
-        (
-            {"urn:zitadel:iam:org:project:987654321:roles": {"system": True}},
-            ["system", "superuser"],
-            "Not enough permissions",
-        ),
-        # No required scopes - should pass
-        ({"urn:zitadel:iam:org:project:987654321:roles": {"system": True}}, [], None),
-    ],
-    ids=[
-        "valid_scopes",
-        "missing_permission_claim",
-        "invalid_claim_type",
-        "missing_required_scope",
-        "empty_roles",
-        "missing_one_of_multiple_scopes",
-        "no_required_scopes",
-    ],
-)
-def test_validate_scopes(auth_config, claims, required_scopes, expected_error):
-    """
-    Test the _validate_scopes method
-    """
-    auth = ZitadelAuth(auth_config)
-
-    if expected_error:
-        with pytest.raises(InvalidAuthException, match=expected_error):
-            auth._validate_scopes(claims, required_scopes)
-    else:
-        result = auth._validate_scopes(claims, required_scopes)
-        assert result is True
-
-
-# Test with different project IDs
-@pytest.mark.parametrize(
-    "project_id,claims,expected_error",
-    [
-        # Matching project ID
-        (
-            "987654321",
-            {"urn:zitadel:iam:org:project:987654321:roles": {"system": True}},
-            None,
-        ),
-        # Different project ID
-        (
-            "different_project",
-            {"urn:zitadel:iam:org:project:987654321:roles": {"system": True}},
-            "Invalid token structure",
-        ),
-    ],
-    ids=["matching_project_id", "different_project_id"],
-)
-def test_validate_scopes_project_id(project_id, claims, expected_error):
-    """
-    Test the _validate_scopes method with different project IDs
-    """
-    config = AuthConfig(
-        zitadel_host="https://issuer.zitadel.cloud",
-        client_id="123456789",
-        project_id=project_id,
-        algorithm="RS256",
-        scopes={"system": "system scope"},
-    )
-
-    auth = ZitadelAuth(config)
-
-    if expected_error:
-        with pytest.raises(InvalidAuthException, match=expected_error):
-            auth._validate_scopes(claims, ["system"])
-    else:
-        result = auth._validate_scopes(claims, ["system"])
-        assert result is True
-
-
-@pytest.mark.asyncio
-async def test_missing_token(auth_config):
-    """
-    Test when the Authorization header is missing
-    """
-    auth = ZitadelAuth(auth_config)
-    request = Request(
-        scope={
-            "type": "http",
-            "headers": [],  # No Authorization header
         }
-    )
-    scopes = SecurityScopes(scopes=["system"])
-
-    with pytest.raises(HTTPException, match="Not authenticated"):
-        await auth(request, scopes)
 
 
-@pytest.mark.asyncio
-async def test_empty_token(auth_config):
-    """
-    Test when the Authorization header is empty
-    """
-    auth = ZitadelAuth(auth_config)
-    request = Request(
-        scope={
-            "type": "http",
-            "headers": [(b"authorization", b"Bearer ")],  # Empty token
+async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
+    """Test that if no signing keys are found, the token cannot be decoded."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
         }
-    )
-    scopes = SecurityScopes(scopes=["system"])
-
-    with pytest.raises(InvalidAuthException, match="Invalid token format"):
-        await auth(request, scopes)
+        assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-@pytest.mark.asyncio
-async def test_unexpected_error(auth_config, mock_jwks, test_keys, mocker):
-    """
-    Test handling of unexpected errors
-    """
-    with respx.mock(assert_all_called=False) as mock:
-        mock.get(auth_config.jwks_url).mock(
-            return_value=httpx.Response(200, json=mock_jwks())
-        )
-
-        auth = ZitadelAuth(auth_config)
-        token = create_test_token(test_keys)
-
-        request = Request(
-            scope={
-                "type": "http",
-                "headers": [(b"authorization", f"Bearer {token}".encode())],
-            }
-        )
-        scopes = SecurityScopes(scopes=["system"])
-
-        # Mock the token validator to raise an unexpected error
-        mocker.patch.object(
-            auth.token_validator, "verify", side_effect=RuntimeError("Unexpected error")
-        )
-
-        with pytest.raises(InvalidAuthException, match="Unable to process token"):
-            await auth(request, scopes)
-
-
-@pytest.mark.asyncio
-async def test_malformed_authorization_header(auth_config):
-    """
-    Test when the Authorization header is malformed
-    """
-    auth = ZitadelAuth(auth_config)
-    request = Request(
-        scope={
-            "type": "http",
-            "headers": [(b"authorization", b"Invalid Format")],  # Not Bearer format
+async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
+    """Test that a user without the admin role is rejected from the admin endpoint."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="user")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": {"error": "insufficient_scope", "message": "User does not have role assigned: admin"}
         }
-    )
-    scopes = SecurityScopes(scopes=["system"])
+        assert response.headers["WWW-Authenticate"] == "Bearer"
 
-    with pytest.raises(HTTPException, match="Not authenticated"):
-        await auth(request, scopes)
+
+async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
+    """Test that a token with an invalid issuer is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", invalid_iss=True)},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Token contains invalid claims"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
+    """Test that a token with an invalid audience is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", invalid_aud=True)},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Token contains invalid claims"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_keys):
+    """Test that if no valid keys are found, the token cannot be decoded."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
+        }
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
+    """Test that a token without the required scopes is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(scopes="openid email profile")},
+    ) as ac:
+        response = await ac.get("/api/protected/scope")
+    assert response.status_code == 403
+    assert response.json() == {"detail": {"error": "insufficient_scope", "message": "Missing required scope: scope1"}}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
+    """Test that a token with invalid scope format is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={
+            "Authorization": "Bearer " + create_test_token(scopes=None)  # type: ignore
+        },
+    ) as ac:
+        response = await ac.get("/api/protected/scope")
+    assert response.status_code == 401
+    assert response.json() == {
+        "detail": {"error": "invalid_token", "message": "Token contains invalid formatted scopes"}
+    }
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_expired_token(fastapi_app, mock_openid_and_keys):
+    """Test that an expired token is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(expired=True)},
+    ) as ac:
+        response = await ac.get("/api/protected/scope")
+    assert response.status_code == 401
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Token signature has expired"}}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
+    """Test that a token signed with an 'evil' key is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", evil=True)},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+    assert response.status_code == 401
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Unable to validate token"}}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_malformed_token(fastapi_app, mock_openid_and_keys):
+    """Test that a malformed token is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+    assert response.status_code == 401
+    assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token format"}}
+
+
+async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that when no token is available in the request, it is rejected."""
+    mocker.patch.object(ZitadelAuth, "_extract_access_token", return_value=None)
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 400
+        assert response.json() == {"detail": {"error": "invalid_request", "message": "No access token provided"}}
+
+
+async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that when the token is not a Bearer token, it is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+
+        # actually raised in fastapi.oauth2.OAuth2AuthorizationCodeBearer
+        assert response.json() == {"detail": "Not authenticated"}
+        assert response.status_code == 401
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that an exception during token extraction is handled."""
+    mocker.patch.object(ZitadelAuth, "_extract_access_token", side_effect=ValueError("oops"))
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": {"error": "invalid_request", "message": "Unable to extract token from request"}
+        }
+
+
+async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
+    """Test that a token header with an invalid algorithm is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(alg="RS512")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token header"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
+    """Test that a token header with an invalid type is rejected."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(typ="JWS")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token header"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
+    """Test that an exception during token verification is handled."""
+    mocker.patch.object(TokenValidator, "verify", side_effect=ValueError("oops"))
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Unable to process token"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, freezer):
+    """
+    Test that the keys are fetched again if the current keys are outdated.
+    """
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 200
+
+    freezer.move_to(datetime.now() + timedelta(hours=3))  # The keys fetched are now outdated
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        second_response = await ac.get("/api/protected/admin")
+        assert second_response.status_code == 401
+        assert second_response.json() == {
+            "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
+        }
+        assert second_response.headers["WWW-Authenticate"] == "Bearer"

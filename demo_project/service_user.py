@@ -1,5 +1,5 @@
 """
-This module demonstrates how to authenticate a service account with Zitadel.
+This module demonstrates how to authenticate a service user with Zitadel.
 """
 
 import asyncio
@@ -14,9 +14,12 @@ except ImportError:
     # ImportError handling since it's also used in tests
     from demo_project.settings import get_settings
 
-# UPDATE THIS VALUE ----------------------------------------------
+# UPDATE THESE VALUES ----------------------------------------------
 # The service account private key file downloaded from Zitadel
 SERVICE_USER_PRIVATE_KEY_FILE = "service_user.json"
+
+# The role that the service user should have in Zitadel
+ROLE = "admin"
 # ---------------------------------------------------------------
 
 # Loading the service account private key JSON file
@@ -47,6 +50,9 @@ jwt_token = pyjwt.encode(payload, private_key, algorithm="RS256", headers=header
 
 
 async def main():
+    """
+    Authenticate a service user with Zitadel and make an API call to a protected endpoint.
+    """
     # Creating an asynchronous HTTP client context
     async with AsyncClient() as client:
         # Data payload for the OAuth2 token request
@@ -55,9 +61,7 @@ async def main():
             "scope": " ".join(
                 [
                     "openid",
-                    "email",
-                    "profile",
-                    "urn:zitadel:iam:org:projects:roles",
+                    f"urn:zitadel:iam:org:project:role:{ROLE}",
                     f"urn:zitadel:iam:org:project:id:{settings.ZITADEL_PROJECT_ID}:aud",
                 ]
             ),
@@ -65,9 +69,7 @@ async def main():
         }
 
         # Making a POST request to the OAuth2 token endpoint
-        response = await client.post(
-            url=f"{settings.ZITADEL_HOST}oauth/v2/token", data=data
-        )
+        response = await client.post(url=f"{settings.ZITADEL_HOST}oauth/v2/token", data=data)
 
         # Handling the response
         response.raise_for_status()
@@ -75,7 +77,7 @@ async def main():
 
         # Example API call using the acquired access token
         my_api_response = await client.get(
-            "http://localhost:8001/api/private",
+            "http://localhost:8001/api/protected/admin",
             headers={"Authorization": f"Bearer {access_token}"},
         )
         if my_api_response.status_code == 200:

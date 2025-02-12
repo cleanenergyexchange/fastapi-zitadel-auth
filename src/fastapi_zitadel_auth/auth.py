@@ -3,7 +3,7 @@ Authentication module for Zitadel OAuth2
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Type
 
 from fastapi.exceptions import HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer, SecurityScopes
@@ -17,19 +17,25 @@ from jwt import (
     InvalidTokenError,
     MissingRequiredClaimError,
 )
+from pydantic import HttpUrl
 from starlette.requests import Request
 
-from .config import AuthConfig
-from .exceptions import InvalidAuthException
-from .jwks import KeyManager
-from .models import AuthenticatedUser, ZitadelClaims
+from .exceptions import UnauthorizedException, InvalidRequestException, ForbiddenException
+from .user import (
+    ClaimsT,
+    DefaultZitadelClaims,
+    DefaultZitadelUser,
+    UserT,
+    JwtClaims,
+    BaseZitadelUser,
+)
+from .openid_config import OpenIdConfig
 from .token import TokenValidator
 
 if TYPE_CHECKING:  # pragma: no cover
     from jwt.algorithms import AllowedPublicKeys  # noqa: F401
 
 log = logging.getLogger("fastapi_zitadel_auth")
-logging.basicConfig(level=logging.DEBUG)
 
 
 class ZitadelAuth(SecurityBase):
@@ -37,118 +43,149 @@ class ZitadelAuth(SecurityBase):
     Zitadel OAuth2 authentication using bearer token
     """
 
-    def __init__(self, config: AuthConfig) -> None:
+    def __init__(
+        self,
+        issuer_url: HttpUrl | str,
+        project_id: str,
+        app_client_id: str,
+        allowed_scopes: dict[str, str],
+        token_leeway: float = 0,
+        claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
+        user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
+    ) -> None:
         """
         Initialize the ZitadelAuth object
 
-        :param config: AuthConfig object
+        :param issuer_url: HttpUrl | str
+            The Zitadel issuer URL
+
+        :param project_id: str
+            The Zitadel project ID
+
+        :param app_client_id: str
+            The Zitadel application client ID
+
+        :param allowed_scopes: dict[str, str]
+            The allowed scopes for the application. Key is the scope name and value is the description.
+            Example:
+                {
+                    "read": "Read access"
+                }
+
+        :param token_leeway: float
+            The tolerance time in seconds for token validation
+
+        :param claims_model: Type[ClaimsT]
+            The claims model to use, e.g. DefaultZitadelClaims. See user.py
+
+        :param user_model:  Type[UserT]
+            The user model to use, e.g. DefaultZitadelUser. See user.py
         """
-        self.config = config
+
+        self.client_id = app_client_id
+        self.project_id = project_id
+        self.issuer_url = str(issuer_url).rstrip("/")
+        self.token_leeway = token_leeway
+
+        if not issubclass(claims_model, JwtClaims):
+            raise ValueError("claims_model must be a subclass of JwtClaims")
+
+        if not issubclass(user_model, BaseZitadelUser):
+            raise ValueError("user_model must be a subclass of BaseZitadelUser")
+
+        self.claims_model = claims_model
+        self.user_model = user_model
+
+        self.openid_config = OpenIdConfig(
+            issuer_url=self.issuer_url,
+            config_url=f"{self.issuer_url}/.well-known/openid-configuration",
+            authorization_url=f"{self.issuer_url}/oauth/v2/authorize",
+            token_url=f"{self.issuer_url}/oauth/v2/token",
+            jwks_uri=f"{self.issuer_url}/oauth/v2/keys",
+        )
+
         self.oauth = OAuth2AuthorizationCodeBearer(
-            authorizationUrl=config.authorization_url,
-            tokenUrl=config.token_url,
-            scopes=config.scopes,
+            authorizationUrl=self.openid_config.authorization_url,
+            tokenUrl=self.openid_config.token_url,
+            scopes=allowed_scopes,
             scheme_name="ZitadelAuthorizationCodeBearer",
             description="Zitadel OAuth2 authentication using bearer token",
         )
-        self.token_validator = TokenValidator(algorithm=config.algorithm)
-        self.key_manager = KeyManager(
-            jwks_url=config.jwks_url, algorithm=config.algorithm
-        )
+
+        self.token_validator = TokenValidator()
         self.model = self.oauth.model
         self.scheme_name = self.oauth.scheme_name
 
-    async def __call__(
-        self, request: Request, security_scopes: SecurityScopes
-    ) -> AuthenticatedUser | None:
+    async def __call__(self, request: Request, security_scopes: SecurityScopes) -> UserT | None:
         """
-        Extend the SecurityBase __call__ method to validate the Zitadel OAuth2 token
+        Extend the SecurityBase.__call__ method to validate the Zitadel OAuth2 token.
+        see also FastAPI -> "Advanced Dependency".
         """
         try:
-            # extract token from request
             access_token = await self._extract_access_token(request)
             if access_token is None:
-                raise InvalidAuthException("No access token provided")
+                raise InvalidRequestException("No access token provided")
 
-            # Parse unverified header and claims
-            header, claims = self.token_validator.parse_unverified(token=access_token)
-            log.debug(f"Header: {header}")
-            log.debug(f"Claims: {claims}")
-            log.debug(f"Required scopes: {security_scopes.scopes}")
+            unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
+            self.token_validator.validate_header(unverified_header)
+            self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
 
-            # Validate scopes
-            self._validate_scopes(claims, security_scopes.scopes)
+            await self.openid_config.load_config()
 
-            # Get the JWKS public key
-            key = await self.key_manager.get_public_key(header.get("kid", ""))
-            if not key:
-                raise InvalidAuthException("No valid signing key found")
+            try:
+                signing_key = self.openid_config.get_signing_key(unverified_header["kid"])
+                if signing_key is not None:
+                    verified_claims = self.token_validator.verify(
+                        token=access_token,
+                        key=signing_key,
+                        audiences=[self.client_id, self.project_id],
+                        issuer=self.openid_config.issuer_url,
+                        token_leeway=self.token_leeway,
+                    )
 
-            # Verify the token with the public key
-            verified_claims = self.token_validator.verify(
-                token=access_token,
-                key=key,
-                audiences=[self.config.client_id, self.config.project_id],
-                issuer=self.config.issuer,
-            )
+                    user: UserT = self.user_model(  # type: ignore
+                        claims=self.claims_model.model_validate(verified_claims),
+                        access_token=access_token,
+                    )
+                    # Add the user to the request state
+                    request.state.user = user
+                    return user
+            except (
+                InvalidAudienceError,
+                InvalidIssuerError,
+                InvalidIssuedAtError,
+                ImmatureSignatureError,
+                MissingRequiredClaimError,
+            ) as error:
+                log.info(f"Token contains invalid claims: {error}")
+                raise UnauthorizedException("Token contains invalid claims") from error
 
-            # Create the authenticated user object and attach it to starlette.request.state
-            user = AuthenticatedUser(
-                claims=ZitadelClaims.model_validate(verified_claims),
-                access_token=access_token,
-            )
-            request.state.user = user
-            return user
+            except ExpiredSignatureError as error:
+                log.info(f"Token signature has expired. {error}")
+                raise UnauthorizedException("Token signature has expired") from error
 
-        except (
-            InvalidAudienceError,
-            InvalidIssuerError,
-            InvalidIssuedAtError,
-            ImmatureSignatureError,
-            MissingRequiredClaimError,
-        ) as error:
-            log.warning(f"Token contains invalid claims: {error}")
-            raise InvalidAuthException("Token contains invalid claims") from error
+            except InvalidTokenError as error:
+                log.warning(f"Invalid token. Error: {error}", exc_info=True)
+                raise UnauthorizedException("Unable to validate token") from error
 
-        except ExpiredSignatureError as error:
-            log.warning(f"Token signature has expired. {error}")
-            raise InvalidAuthException("Token signature has expired") from error
+            except Exception as error:
+                # Extra failsafe in case of a bug in PyJWT
+                log.exception(f"Unable to process jwt token. Uncaught error: {error}")
+                raise UnauthorizedException("Unable to process token") from error
 
-        except InvalidTokenError as error:
-            log.warning(f"Invalid token. Error: {error}", exc_info=True)
-            raise InvalidAuthException("Unable to validate token") from error
+            log.warning("Unable to verify token, no signing keys found")
+            raise UnauthorizedException("Unable to verify token, no signing keys found")
 
-        except (InvalidAuthException, HTTPException):
+        except (UnauthorizedException, InvalidRequestException, ForbiddenException, HTTPException):
             raise
 
         except Exception as error:
-            # Extra failsafe in case of a bug in a future version of the jwt library
-            log.exception(f"Unable to process jwt token. Uncaught error: {error}")
-            raise InvalidAuthException("Unable to process token") from error
+            # Failsafe in case of error in OAuth2AuthorizationCodeBearer.__call__
+            log.warning(f"Unable to extract token from request. Error: {error}")
+            raise InvalidRequestException("Unable to extract token from request") from error
 
     async def _extract_access_token(self, request: Request) -> str | None:
         """
         Extract the access token from the request
         """
         return await self.oauth(request=request)
-
-    def _validate_scopes(
-        self, claims: dict[str, Any], required_scopes: list[str]
-    ) -> bool:
-        """
-        Validate the token scopes against the required scopes
-        """
-        permission_claim = f"urn:zitadel:iam:org:project:{self.config.project_id}:roles"
-
-        if permission_claim not in claims or not isinstance(
-            claims[permission_claim], dict
-        ):
-            log.warning(f"Missing or invalid roles in token claims: {permission_claim}")
-            raise InvalidAuthException("Invalid token structure")
-
-        project_roles = claims[permission_claim]
-        for required_scope in required_scopes:
-            if required_scope not in project_roles:
-                log.warning(f"Token does not have required scope: {required_scope}")
-                raise InvalidAuthException("Not enough permissions")
-        return True

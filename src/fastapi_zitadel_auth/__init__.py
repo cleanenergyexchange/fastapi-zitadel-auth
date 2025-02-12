@@ -3,8 +3,7 @@ FastAPI Zitadel Auth
 """
 
 from fastapi_zitadel_auth.auth import ZitadelAuth
-from fastapi_zitadel_auth.config import AuthConfig
 
-__all__ = ["ZitadelAuth", "AuthConfig"]
+__version__ = "0.2.0"  # remember to update also in pyproject.toml
 
-__version__ = "0.1.1"  # remember to update also in pyproject.toml
+__all__ = ["ZitadelAuth", "__version__"]
