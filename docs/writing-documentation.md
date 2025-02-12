@@ -11,5 +11,11 @@ uv sync --group docs
 * **Build** the documentation:
 
 ```bash
+uv run mkdocs build
+```
+
+* **Serve** the documentation locally:
+
+```bash
 uv run mkdocs serve
 ```
