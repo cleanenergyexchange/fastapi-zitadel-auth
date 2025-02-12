@@ -1,8 +1,8 @@
 # FastAPI Zitadel Auth
 
-Simplify OAuth2 authentication in FastAPI apps using [**Zitadel**](https://zitadel.com/) as the identity service, 
-including token validation, role-based access control, and Swagger UI integration.
-
+<p>
+    <em>Simplify OAuth2 authentication and authorization in FastAPI apps using <b><a href="https://zitadel.com">Zitadel</a></b>.</em>
+</p>
 
 <a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml" target="_blank">
     <img src="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/actions/workflows/test.yml/badge.svg" alt="Test status">
@@ -26,6 +26,13 @@ including token validation, role-based access control, and Swagger UI integratio
     <img src="https://badgen.net/github/license/cleanenergyexchange/fastapi-zitadel-auth/" alt="License"/>
 </a>
 
+---
+
+**Documentation**: <a href="https://cleanenergyexchange.github.io/fastapi-zitadel-auth" target="_blank">https://cleanenergyexchange.github.io/fastapi-zitadel-auth</a>
+
+**Source Code**: <a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth" target="_blank">https://github.com/cleanenergyexchange/fastapi-zitadel-auth</a>
+
+---
 
 ## Features
 
@@ -38,149 +45,18 @@ including token validation, role-based access control, and Swagger UI integratio
 * Extensible claims and user models
 
 
-> [!NOTE]
-> This library implements JWT, locally validated using JWKS, as it prioritizes performance, 
-> see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs).
-> If you need to validate opaque tokens using Introspection, please open an issue – PRs are welcome!
+!!! info "JWT vs Opaque tokens"
+
+    This library implements JWT, locally validated using JWKS, as it **prioritizes performance**, 
+    see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs). 
+    If you need to validate opaque tokens using Introspection, please [open an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues) – PRs are welcome!
 
 
-## Installation and quick start
+## License
 
-```bash
-pip install fastapi-zitadel-auth
-```
-
-> [!TIP]
-> This library is in active development, so breaking changes can occur.
-> We recommend **pinning the version** until a stable release is available.
-
-
-## Usage
-
-### Configuration
-
-#### Zitadel
-
-Set up a project in Zitadel according to [docs/zitadel_setup.md](docs/zitadel_setup.md).
-
-#### FastAPI
-
-```python
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Request, Security, Depends
-from pydantic import HttpUrl
-from fastapi_zitadel_auth import ZitadelAuth
-from fastapi_zitadel_auth.user import DefaultZitadelUser
-from fastapi_zitadel_auth.exceptions import ForbiddenException
-
-# IDs from Zitadel console, see documentation on how to set up Zitadel
-CLIENT_ID = 'your-zitadel-client-id'
-PROJECT_ID = 'your-zitadel-project-id'
-
-# Create a ZitadelAuth object usable as a FastAPI dependency
-zitadel_auth = ZitadelAuth(
-    issuer_url=HttpUrl('https://your-instance-xyz.zitadel.cloud'),
-    project_id=PROJECT_ID,
-    app_client_id=CLIENT_ID,
-    allowed_scopes={
-        "openid": "OpenID Connect",
-        "email": "Email",
-        "profile": "Profile",
-        "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
-        "urn:zitadel:iam:org:projects:roles": "Roles",
-    }
-)
-
-
-# Create a dependency to validate that the user has the required role
-async def validate_is_admin_user(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
-    required_role = "admin"
-    if required_role not in user.claims.project_roles.keys():
-        raise ForbiddenException(f"User does not have role assigned: {required_role}")
-
-
-# Load OpenID configuration at startup
-@asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa
-    await zitadel_auth.openid_config.load_config()
-    yield
-
-
-# Create a FastAPI app and configure Swagger UI
-app = FastAPI(
-    title="fastapi-zitadel-auth demo",
-    lifespan=lifespan,
-    swagger_ui_oauth2_redirect_url="/oauth2-redirect",
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": True,
-        "clientId": CLIENT_ID,
-        "scopes": " ".join(  # defining the pre-selected scope ticks in the Swagger UI
-            [
-                "openid",
-                "profile",
-                "email",
-                "urn:zitadel:iam:org:projects:roles",
-                "urn:zitadel:iam:org:project:id:zitadel:aud",
-            ]
-        ),
-    },
-)
-
-
-# Endpoint that requires a user to be authenticated and have the admin role
-@app.get(
-    "/api/protected/admin",
-    summary="Protected endpoint, requires admin role",
-    dependencies=[Security(validate_is_admin_user)],
-)
-def protected_for_admin(request: Request):
-    user = request.state.user
-    return {"message": "Hello world!", "user": user}
-
-
-# Endpoint that requires a user to be authenticated and have a specific scope
-@app.get(
-    "/api/protected/scope",
-    summary="Protected endpoint, requires a specific scope",
-    dependencies=[Security(zitadel_auth, scopes=["scope1"])],
-)
-def protected_by_scope(request: Request):
-    user = request.state.user
-    return {"message": "Hello world!", "user": user}
-
-```
-
-If you need to customize the claims or user model, see [docs/custom_claims_and_users.md](docs/custom_claims_and_users.md).
-
-## Demo app
-
-See `demo_project` for a complete example, including service user login. 
-
-To run the demo app using `uv`:
-
-```bash
-uv run demo_project/main.py
-```
-
-Then navigate to `http://localhost:8001/docs` to see the Swagger UI.
-
-
-### Service user login
-
-Service users are "machine users" in Zitadel. To log in as a service user, download the private key from Zitadel, change the config in `demo_project/service_user.py`, then
-
-```bash
-uv run demo_project/service_user.py
-```
-
-Make sure you have a running server at `http://localhost:8001` (see above).
-
-## Development
-
-See [docs/contributing.md](docs/contributing.md) for development instructions.
-
+This project is licensed under the terms of the [MIT license](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENCE).
 
 ## Acknowledgements
 
-This package was heavily inspired by [`intility/fastapi-azure-auth`](https://github.com/intility/fastapi-azure-auth/).
+This package was heavily inspired by [intility/fastapi-azure-auth](https://github.com/intility/fastapi-azure-auth/). 
+Give them a star ⭐️!
