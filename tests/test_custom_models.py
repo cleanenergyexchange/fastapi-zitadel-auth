@@ -8,7 +8,7 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
-from tests.utils import zitadel_issuer
+from tests.utils import ZITADEL_ISSUER
 
 
 class CustomClaims(JwtClaims):
@@ -40,7 +40,7 @@ class InvalidUser(BaseModel):
 def default_auth():
     """Fixture for default ZitadelAuth instance"""
     return ZitadelAuth(
-        issuer_url=zitadel_issuer(),
+        issuer_url=ZITADEL_ISSUER,
         project_id="project_id",
         app_client_id="client_id",
         allowed_scopes={
@@ -55,7 +55,7 @@ def custom_auth():
     return ZitadelAuth(
         claims_model=CustomClaims,
         user_model=CustomUser,
-        issuer_url=zitadel_issuer(),
+        issuer_url=ZITADEL_ISSUER,
         project_id="project_id",
         app_client_id="client_id",
         allowed_scopes={
@@ -80,7 +80,7 @@ class TestZitadelAuth:
         with pytest.raises(ValueError, match="claims_model must be a subclass of JwtClaims"):
             ZitadelAuth(
                 claims_model=InvalidClaims,  # type: ignore
-                issuer_url=zitadel_issuer(),
+                issuer_url=ZITADEL_ISSUER,
                 project_id="project_id",
                 app_client_id="client_id",
                 allowed_scopes={
@@ -93,7 +93,7 @@ class TestZitadelAuth:
         with pytest.raises(ValueError, match="user_model must be a subclass of BaseZitadelUser"):
             ZitadelAuth(
                 user_model=InvalidUser,  # type: ignore
-                issuer_url=zitadel_issuer(),
+                issuer_url=ZITADEL_ISSUER,
                 project_id="project_id",
                 app_client_id="client_id",
                 allowed_scopes={

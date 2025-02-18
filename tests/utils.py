@@ -2,6 +2,7 @@
 Test utilities
 """
 
+import os
 from datetime import datetime, timedelta
 
 import jwt
@@ -9,15 +10,21 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+# Global test settings
+ZITADEL_ISSUER = os.environ["ZITADEL_HOST"]  # The Zitadel issuer URL
+ZITADEL_PROJECT_ID = os.environ["ZITADEL_PROJECT_ID"]  # The project ID where the API app is located
+ZITADEL_CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]  # The client ID of the API app
+ZITADEL_PRIMARY_DOMAIN = "client-fza.region.zitadel.cloud"  # The primary domain of a Zitadel client
 
-def zitadel_issuer() -> str:
-    """Zitadel issuer_url URL used for tests"""
-    return "https://test-fza01.zitadel.cloud"
+
+def openid_config_url() -> str:
+    """OpenID configuration URL fixture"""
+    return f"{ZITADEL_ISSUER}/.well-known/openid-configuration"
 
 
-def zitadel_primary_domain() -> str:
-    """Zitadel primary domain used for tests"""
-    return "client-fza.region.zitadel.cloud"
+def keys_url() -> str:
+    """OpenID keys URL fixture"""
+    return f"{ZITADEL_ISSUER}/oauth/v2/keys"
 
 
 def create_test_token(
@@ -34,11 +41,11 @@ def create_test_token(
     """Create JWT tokens for testing"""
     now = datetime.now()
     claims = {
-        "aud": ["wrong-id"] if invalid_aud else ["123456789", "987654321"],
-        "client_id": "123456789",
+        "aud": ["wrong-id"] if invalid_aud else [ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID],
+        "client_id": ZITADEL_CLIENT_ID,
         "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
-        "iss": "wrong-issuer" if invalid_iss else zitadel_issuer(),
+        "iss": "wrong-issuer" if invalid_iss else ZITADEL_ISSUER,
         "sub": "user123",
         "nbf": int(now.timestamp()),
         "jti": "unique-token-id",
@@ -46,7 +53,7 @@ def create_test_token(
     }
 
     if role:
-        claims["urn:zitadel:iam:org:project:987654321:roles"] = {role: {"role_id": zitadel_primary_domain()}}
+        claims[f"urn:zitadel:iam:org:project:{ZITADEL_PROJECT_ID}:roles"] = {role: {"role_id": ZITADEL_PRIMARY_DOMAIN}}
 
     # For evil token use the evil key but claim it's from the valid key
     signing_key = evil_key if evil else valid_key
@@ -100,13 +107,3 @@ def create_openid_keys(empty_keys: bool = False, no_valid_keys: bool = False) ->
 
 valid_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
 evil_key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
-
-
-def openid_config_url() -> str:
-    """OpenID configuration URL fixture"""
-    return f"{zitadel_issuer()}/.well-known/openid-configuration"
-
-
-def keys_url() -> str:
-    """OpenID keys URL fixture"""
-    return f"{zitadel_issuer()}/oauth/v2/keys"

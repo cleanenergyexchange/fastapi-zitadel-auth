@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.token import TokenValidator
-from tests.utils import create_test_token, zitadel_primary_domain, zitadel_issuer
+from tests.utils import create_test_token, ZITADEL_PRIMARY_DOMAIN, ZITADEL_ISSUER, ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID
 
 
 @pytest.mark.asyncio
@@ -34,18 +34,18 @@ async def test_admin_user(fastapi_app, mock_openid_and_keys):
                 "access_token": access_token,
                 "claims": {
                     "aud": [
-                        "123456789",
-                        "987654321",
+                        ZITADEL_PROJECT_ID,
+                        ZITADEL_CLIENT_ID,
                     ],
-                    "client_id": "123456789",
+                    "client_id": ZITADEL_CLIENT_ID,
                     "exp": expires,
                     "iat": issued_at,
-                    "iss": zitadel_issuer(),
+                    "iss": ZITADEL_ISSUER,
                     "jti": "unique-token-id",
                     "nbf": issued_at,
                     "project_roles": {
                         "admin": {
-                            "role_id": zitadel_primary_domain(),
+                            "role_id": ZITADEL_PRIMARY_DOMAIN,
                         },
                     },
                     "sub": "user123",
@@ -191,6 +191,7 @@ async def test_malformed_token(fastapi_app, mock_openid_and_keys):
         response = await ac.get("/api/protected/admin")
     assert response.status_code == 401
     assert response.json() == {"detail": {"error": "invalid_token", "message": "Invalid token format"}}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
@@ -276,9 +277,9 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_change_of_keys_works(fastapi_app, mock_openid_ok_then_empty, freezer):
+async def test_keys_expire(fastapi_app, mock_openid_ok_then_empty, freezer):
     """
-    Test that the keys are fetched again if the current keys are outdated.
+    Test that the keys are fetched again when they expire and the token is rejected.
     """
     async with AsyncClient(
         transport=ASGITransport(app=app),
