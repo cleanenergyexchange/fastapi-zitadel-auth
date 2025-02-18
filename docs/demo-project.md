@@ -47,7 +47,7 @@ uv run demo_project/service_user.py
       "nbf": 1739363374,
       "jti": "...",
       "project_roles": {
-        "system": {
+        "admin": {
           "1234567": "hello.xyz.zitadel.cloud"
         }
       }
