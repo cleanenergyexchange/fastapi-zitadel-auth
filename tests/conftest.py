@@ -12,27 +12,26 @@ from starlette.testclient import TestClient
 from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
-from tests.utils import create_openid_keys, zitadel_issuer, openid_config_url, keys_url
+from tests.utils import (
+    create_openid_keys,
+    ZITADEL_ISSUER,
+    openid_config_url,
+    keys_url,
+    ZITADEL_CLIENT_ID,
+    ZITADEL_PROJECT_ID,
+)
 
 
 @pytest.fixture
 def fastapi_app():
     """FastAPI app fixture"""
     zitadel_auth_overrides = ZitadelAuth(
-        issuer_url=zitadel_issuer(),
-        app_client_id="123456789",
-        project_id="987654321",
+        issuer_url=ZITADEL_ISSUER,
+        app_client_id=ZITADEL_CLIENT_ID,
+        project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"scope1": "Some scope"},
     )
     app.dependency_overrides[zitadel_auth] = zitadel_auth_overrides
-    yield
-
-
-@pytest.fixture(autouse=True)
-async def reset_openid_config():
-    """Reset the OpenID configuration before each test"""
-    zitadel_auth.openid_config.last_refresh_timestamp = None
-    zitadel_auth.openid_config.signing_keys = {}
     yield
 
 
@@ -43,19 +42,26 @@ def blockbuster() -> Iterator[BlockBuster]:
         yield bb
 
 
+@pytest.fixture(autouse=True)
+async def reset_openid_config():
+    """Reset the OpenID configuration before each test"""
+    zitadel_auth.openid_config.last_refresh_timestamp = None
+    zitadel_auth.openid_config.signing_keys = {}
+    yield
+
+
 def openid_configuration() -> dict:
     """OpenID configuration fixture"""
-    zitadel_host = zitadel_issuer()
     return {
-        "issuer": zitadel_host,
-        "authorization_endpoint": f"{zitadel_host}/oauth/v2/authorize",
-        "token_endpoint": f"{zitadel_host}/oauth/v2/token",
-        "introspection_endpoint": f"{zitadel_host}/oauth/v2/introspect",
-        "userinfo_endpoint": f"{zitadel_host}/oidc/v1/userinfo",
-        "revocation_endpoint": f"{zitadel_host}/oauth/v2/revoke",
-        "end_session_endpoint": f"{zitadel_host}/oidc/v1/end_session",
-        "device_authorization_endpoint": f"{zitadel_host}/oauth/v2/device_authorization",
-        "jwks_uri": f"{zitadel_host}/oauth/v2/keys",
+        "issuer": ZITADEL_ISSUER,
+        "authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+        "token_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/token",
+        "introspection_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/introspect",
+        "userinfo_endpoint": f"{ZITADEL_ISSUER}/oidc/v1/userinfo",
+        "revocation_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/revoke",
+        "end_session_endpoint": f"{ZITADEL_ISSUER}/oidc/v1/end_session",
+        "device_authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/device_authorization",
+        "jwks_uri": f"{ZITADEL_ISSUER}/oauth/v2/keys",
         "scopes_supported": [
             "openid",
             "profile",

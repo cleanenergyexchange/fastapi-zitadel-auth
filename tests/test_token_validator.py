@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 from fastapi_zitadel_auth.token import TokenValidator
-from tests.utils import zitadel_issuer
+from tests.utils import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
 
 @pytest.fixture(scope="module")
@@ -37,8 +37,8 @@ def valid_token(rsa_keys) -> str:
 
     claims = {
         "sub": "user123",
-        "iss": zitadel_issuer(),
-        "aud": ["client123", "project123"],
+        "iss": ZITADEL_ISSUER,
+        "aud": [ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
         "exp": now + 3600,
         "iat": now,
         "nbf": now,
@@ -185,13 +185,13 @@ class TestTokenValidator:
         claims = token_validator.verify(
             token=valid_token,
             key=public_key,
-            audiences=["client123", "project123"],
-            issuer=zitadel_issuer(),
+            audiences=[ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
+            issuer=ZITADEL_ISSUER,
         )
 
         assert claims["sub"] == "user123"
-        assert claims["iss"] == zitadel_issuer()
-        assert "client123" in claims["aud"]
+        assert claims["iss"] == ZITADEL_ISSUER
+        assert ZITADEL_CLIENT_ID in claims["aud"]
 
     def test_verify_expired_token(self, token_validator, rsa_keys):
         """Test that the TokenValidator raises an exception when verifying an expired token"""
@@ -200,8 +200,8 @@ class TestTokenValidator:
 
         expired_claims = {
             "sub": "user123",
-            "iss": zitadel_issuer(),
-            "aud": ["client123"],
+            "iss": ZITADEL_ISSUER,
+            "aud": [ZITADEL_CLIENT_ID],
             "exp": now - 3600,  # Expired 1 hour ago
             "iat": now - 7200,
             "nbf": now - 7200,
@@ -220,8 +220,8 @@ class TestTokenValidator:
             token_validator.verify(
                 token=expired_token,
                 key=public_key,
-                audiences=["client123"],
-                issuer=zitadel_issuer(),
+                audiences=[ZITADEL_CLIENT_ID],
+                issuer=ZITADEL_ISSUER,
             )
 
     def test_verify_invalid_audience(self, token_validator, valid_token, rsa_keys):
@@ -233,7 +233,7 @@ class TestTokenValidator:
                 token=valid_token,
                 key=public_key,
                 audiences=["wrong_audience"],
-                issuer=zitadel_issuer(),
+                issuer=ZITADEL_ISSUER,
             )
 
     def test_verify_invalid_issuer(self, token_validator, valid_token, rsa_keys):
@@ -244,7 +244,7 @@ class TestTokenValidator:
             token_validator.verify(
                 token=valid_token,
                 key=public_key,
-                audiences=["client123", "project123"],
+                audiences=[ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
                 issuer="https://wrong.issuer.com",
             )
 
@@ -258,8 +258,8 @@ class TestTokenValidator:
             token_validator.verify(
                 token=valid_token,
                 key=wrong_key,
-                audiences=["client123", "project123"],
-                issuer=zitadel_issuer(),
+                audiences=[ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
+                issuer=ZITADEL_ISSUER,
             )
 
     def test_verify_not_yet_valid(self, token_validator, rsa_keys):
@@ -269,8 +269,8 @@ class TestTokenValidator:
 
         future_claims = {
             "sub": "user123",
-            "iss": zitadel_issuer(),
-            "aud": ["client123"],
+            "iss": ZITADEL_ISSUER,
+            "aud": [ZITADEL_CLIENT_ID],
             "exp": now + 7200,
             "iat": now,
             "nbf": now + 3600,  # Not valid for another hour
@@ -289,8 +289,8 @@ class TestTokenValidator:
             token_validator.verify(
                 token=future_token,
                 key=public_key,
-                audiences=["client123"],
-                issuer=zitadel_issuer(),
+                audiences=[ZITADEL_CLIENT_ID],
+                issuer=ZITADEL_ISSUER,
             )
 
     def test_verify_missing_claims(self, token_validator, rsa_keys):
@@ -299,8 +299,8 @@ class TestTokenValidator:
         now = int(time.time())
 
         incomplete_claims = {
-            "iss": zitadel_issuer(),
-            "aud": ["client123"],
+            "iss": ZITADEL_ISSUER,
+            "aud": [ZITADEL_CLIENT_ID],
             "exp": now + 3600,
             # Missing 'sub' claim
         }
@@ -317,6 +317,6 @@ class TestTokenValidator:
             token_validator.verify(
                 token=incomplete_token,
                 key=public_key,
-                audiences=["client123"],
-                issuer=zitadel_issuer(),
+                audiences=[ZITADEL_CLIENT_ID],
+                issuer=ZITADEL_ISSUER,
             )

@@ -12,10 +12,8 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
-from tests.utils import zitadel_issuer, zitadel_primary_domain
+from tests.utils import ZITADEL_ISSUER, ZITADEL_PRIMARY_DOMAIN, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
-client_id = "client1"
-project_id = "123456789"
 role_key = "role1"
 role_id = "295621089671959405"
 sub = "22222222222222222222"
@@ -26,11 +24,11 @@ def valid_claims_data() -> dict:
     """Fixture providing valid JWT claims data."""
     now = int(time.time())
     return {
-        "aud": [project_id],
-        "client_id": client_id,
+        "aud": [ZITADEL_PROJECT_ID],
+        "client_id": ZITADEL_CLIENT_ID,
         "exp": now + 3600,
         "iat": now,
-        "iss": zitadel_issuer(),
+        "iss": ZITADEL_ISSUER,
         "sub": sub,
         "nbf": now,
         "jti": "unique-token-id",
@@ -41,14 +39,14 @@ def valid_claims_data() -> dict:
 def valid_claims_with_project_roles(valid_claims_data):
     """Fixture providing claims data with Zitadel project roles."""
     data = valid_claims_data.copy()
-    data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {role_key: {role_id: zitadel_primary_domain()}}
+    data[f"urn:zitadel:iam:org:project:{ZITADEL_PROJECT_ID}:roles"] = {role_key: {role_id: ZITADEL_PRIMARY_DOMAIN}}
     return data
 
 
 class TestBaseZitadelClaims:
     """Test suite for JwtClaims model."""
 
-    @pytest.mark.parametrize("aud", [[project_id], ["audience1", "audience2"]])
+    @pytest.mark.parametrize("aud", [[ZITADEL_PROJECT_ID], ["audience1", "audience2"]])
     def test_valid_audience_formats(self, valid_claims_data, aud):
         """Test that list audience formats are accepted."""
         data = valid_claims_data.copy()
@@ -86,7 +84,7 @@ class TestDefaultZitadelClaims:
     def test_project_roles_extraction(self, valid_claims_with_project_roles):
         """Test extraction of project roles from Zitadel-specific claim."""
         claims = DefaultZitadelClaims(**valid_claims_with_project_roles)
-        assert claims.project_roles == {role_key: {role_id: zitadel_primary_domain()}}
+        assert claims.project_roles == {role_key: {role_id: ZITADEL_PRIMARY_DOMAIN}}
 
     def test_missing_project_roles(self, valid_claims_data):
         """Test handling of missing project roles."""
@@ -96,10 +94,12 @@ class TestDefaultZitadelClaims:
     def test_different_project_roles(self, valid_claims_data):
         """Test extraction of project roles with different role values."""
         data = valid_claims_data.copy()
-        data[f"urn:zitadel:iam:org:project:{project_id}:roles"] = {"role2": {"123456789": zitadel_primary_domain()}}
+        data[f"urn:zitadel:iam:org:project:{ZITADEL_PROJECT_ID}:roles"] = {
+            "role2": {"123456789": ZITADEL_PRIMARY_DOMAIN}
+        }
 
         claims = DefaultZitadelClaims(**data)
-        assert claims.project_roles == {"role2": {"123456789": zitadel_primary_domain()}}
+        assert claims.project_roles == {"role2": {"123456789": ZITADEL_PRIMARY_DOMAIN}}
 
 
 class TestDefaultZitadelUser:

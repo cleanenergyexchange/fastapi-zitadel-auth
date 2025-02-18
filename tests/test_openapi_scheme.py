@@ -4,7 +4,7 @@ Test the OpenAPI schema.
 
 import openapi_spec_validator
 
-from tests.utils import zitadel_issuer
+from tests.utils import ZITADEL_ISSUER
 
 openapi_schema = {
     "openapi": "3.1.0",
@@ -66,8 +66,8 @@ openapi_schema = {
                             "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
                             "urn:zitadel:iam:org:projects:roles": "Projects roles",
                         },
-                        "authorizationUrl": f"{zitadel_issuer()}/oauth/v2/authorize",
-                        "tokenUrl": f"{zitadel_issuer()}/oauth/v2/token",
+                        "authorizationUrl": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+                        "tokenUrl": f"{ZITADEL_ISSUER}/oauth/v2/token",
                     }
                 },
             }
