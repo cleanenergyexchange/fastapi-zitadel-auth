@@ -15,7 +15,7 @@ In your Zitadel console:
 
 1.  Create **New Project**, named `Demo project`
 
-2.  After saving, in the project overview, under **General**:
+2.  After saving, in the project overview, under **General**, tick:
 
     1. **Assert Roles on Authentication**
     2. **Check authorization on Authentication**
