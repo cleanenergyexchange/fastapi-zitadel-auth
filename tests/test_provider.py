@@ -43,8 +43,8 @@ async def test_successful_config_load(mock_openid_and_keys):
     assert zitadel_auth.openid_config.authorization_url
     assert zitadel_auth.openid_config.token_url
     assert zitadel_auth.openid_config.jwks_uri
-    assert isinstance(zitadel_auth.openid_config.cache_duration_minutes, int)
-    assert zitadel_auth.openid_config.cache_duration_minutes > 0
+    assert isinstance(zitadel_auth.openid_config.cache_ttl_seconds, int)
+    assert zitadel_auth.openid_config.cache_ttl_seconds > 0
 
 
 async def test_parallel_config_load():
@@ -90,7 +90,7 @@ async def test_cache_expiration():
 
         # Manually expire cache
         zitadel_auth.openid_config.last_refresh_timestamp = datetime.now() - timedelta(
-            minutes=zitadel_auth.openid_config.cache_duration_minutes + 1
+            seconds=zitadel_auth.openid_config.cache_ttl_seconds + 1
         )
 
         # Should trigger refresh

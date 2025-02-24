@@ -24,7 +24,7 @@ class OpenIdConfig(BaseModel):
 
     refresh_lock: Lock = Lock()
     last_refresh_timestamp: datetime | None = None
-    cache_duration_minutes: PositiveInt = 60
+    cache_ttl_seconds: PositiveInt = 600
 
     async def load_config(self) -> None:
         """Refresh the openid configuration and signing keys if necessary."""
@@ -57,6 +57,7 @@ class OpenIdConfig(BaseModel):
         log.debug("Keys url:            %s", self.jwks_uri)
         log.debug("Last refresh:        %s", self.last_refresh_timestamp)
         log.debug("Signing keys:        %s", len(self.signing_keys))
+        log.debug("Cache TTL:           %s s", self.cache_ttl_seconds)
 
     async def get_key(self, kid: str) -> RSAPublicKey:
         """Get a signing key by its ID, refreshing JWKS once if necessary."""
@@ -81,7 +82,7 @@ class OpenIdConfig(BaseModel):
             return True
 
         elapsed = datetime.now() - self.last_refresh_timestamp
-        return elapsed > timedelta(minutes=self.cache_duration_minutes)
+        return elapsed > timedelta(seconds=self.cache_ttl_seconds)
 
     async def _fetch_config(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Fetch OpenID Connect configuration."""

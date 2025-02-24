@@ -50,6 +50,7 @@ class ZitadelAuth(SecurityBase):
         app_client_id: str,
         allowed_scopes: dict[str, str],
         token_leeway: float = 0,
+        cache_ttl_seconds: int = 600,
         claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
         user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
     ) -> None:
@@ -74,6 +75,9 @@ class ZitadelAuth(SecurityBase):
 
         :param token_leeway: float
             The tolerance time in seconds for token validation
+
+        :param cache_ttl_seconds: int
+            The time in seconds to cache the OpenID configuration
 
         :param claims_model: Type[ClaimsT]
             The claims model to use, e.g. DefaultZitadelClaims. See user.py
@@ -102,6 +106,7 @@ class ZitadelAuth(SecurityBase):
             authorization_url=f"{self.issuer_url}/oauth/v2/authorize",
             token_url=f"{self.issuer_url}/oauth/v2/token",
             jwks_uri=f"{self.issuer_url}/oauth/v2/keys",
+            cache_ttl_seconds=cache_ttl_seconds,
         )
 
         self.oauth = OAuth2AuthorizationCodeBearer(
