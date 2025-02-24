@@ -2,6 +2,7 @@
 Test the auth module with endpoint tests.
 """
 
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -12,6 +13,8 @@ from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.token import TokenValidator
 from tests.utils import create_test_token, ZITADEL_PRIMARY_DOMAIN, ZITADEL_ISSUER, ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID
+
+log = logging.getLogger("fastapi_zitadel_auth")
 
 
 @pytest.mark.asyncio
@@ -277,9 +280,13 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_keys_expire(fastapi_app, mock_openid_ok_then_empty, freezer):
+async def test_change_of_keys_work(fastapi_app, mock_openid_ok_then_empty, freezer):
     """
-    Test that the keys are fetched again when they expire and the token is rejected.
+    * Do a successful request.
+    * Set time to hours later, so that a new openid config has to be fetched
+    * Ensure new keys returned is an empty list, so the next request shouldn't work.
+    * Generate a new, valid token
+    * Do request
     """
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -302,3 +309,14 @@ async def test_keys_expire(fastapi_app, mock_openid_ok_then_empty, freezer):
             "detail": {"error": "invalid_token", "message": "Unable to verify token, no signing keys found"}
         }
         assert second_response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_then_ok):
+    """Test that the OpenID configuration is refreshed if the key ID is initially not found."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 200

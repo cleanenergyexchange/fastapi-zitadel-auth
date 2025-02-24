@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
-from tests.utils import valid_key, ZITADEL_ISSUER, openid_config_url
+from tests.utils import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ class TestOpenIdConfig:
             config_url=config_url,
             authorization_url="",
             token_url="",
-            jwks_uri="",
+            jwks_uri=keys_url(),
         )
 
         respx_mock.get(config_url).respond(json=mock_openid_config)
@@ -84,7 +84,7 @@ class TestOpenIdConfig:
             config_url=config_url,
             authorization_url="",
             token_url="",
-            jwks_uri="",
+            jwks_uri=keys_url(),
             cache_duration_minutes=cache_duration_minutes,
         )
 
@@ -121,7 +121,7 @@ class TestOpenIdConfig:
             config_url=config_url,
             authorization_url="",
             token_url="",
-            jwks_uri="",
+            jwks_uri=keys_url(),
         )
 
         invalid_jwks = {

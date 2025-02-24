@@ -131,25 +131,16 @@ class ZitadelAuth(SecurityBase):
             self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
 
             await self.openid_config.load_config()
+            signing_key = await self.openid_config.get_key(unverified_header["kid"])
 
             try:
-                signing_key = self.openid_config.get_signing_key(unverified_header["kid"])
-                if signing_key is not None:
-                    verified_claims = self.token_validator.verify(
-                        token=access_token,
-                        key=signing_key,
-                        audiences=[self.client_id, self.project_id],
-                        issuer=self.openid_config.issuer_url,
-                        token_leeway=self.token_leeway,
-                    )
-
-                    user: UserT = self.user_model(  # type: ignore
-                        claims=self.claims_model.model_validate(verified_claims),
-                        access_token=access_token,
-                    )
-                    # Add the user to the request state
-                    request.state.user = user
-                    return user
+                verified_claims = self.token_validator.verify(
+                    token=access_token,
+                    key=signing_key,
+                    audiences=[self.client_id, self.project_id],
+                    issuer=self.openid_config.issuer_url,
+                    token_leeway=self.token_leeway,
+                )
             except (
                 InvalidAudienceError,
                 InvalidIssuerError,
@@ -173,8 +164,14 @@ class ZitadelAuth(SecurityBase):
                 log.exception(f"Unable to process jwt token. Uncaught error: {error}")
                 raise UnauthorizedException("Unable to process token") from error
 
-            log.warning("Unable to verify token, no signing keys found")
-            raise UnauthorizedException("Unable to verify token, no signing keys found")
+            else:
+                user: UserT = self.user_model(  # type: ignore
+                    claims=self.claims_model.model_validate(verified_claims),
+                    access_token=access_token,
+                )
+                # Add the user to the request state
+                request.state.user = user
+                return user
 
         except (UnauthorizedException, InvalidRequestException, ForbiddenException, HTTPException):
             raise
