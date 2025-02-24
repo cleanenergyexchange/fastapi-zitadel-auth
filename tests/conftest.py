@@ -80,7 +80,6 @@ def mock_openid_and_empty_keys(respx_mock, mock_openid):
 def mock_openid_ok_then_empty(respx_mock, mock_openid):
     """
     Fixture to mock OpenID configuration and keys, first with keys then empty.
-    Repeated calls since the key lookup is repeated.
     """
     keys_route = respx_mock.get(keys_url())
     keys_route.side_effect = [
@@ -95,18 +94,17 @@ def mock_openid_ok_then_empty(respx_mock, mock_openid):
         httpx.Response(json=openid_configuration(), status_code=200),
     ]
     yield
+    assert keys_route.call_count == 3
+    assert openid_route.call_count == 3
 
 
 @respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_empty_then_ok(respx_mock, mock_openid):
-    """
-    Fixture to mock OpenID configuration and keys, first empty then with keys
-    """
     keys_route = respx_mock.get(keys_url())
     keys_route.side_effect = [
         httpx.Response(json=create_openid_keys(empty_keys=True), status_code=200),
-        httpx.Response(json=create_openid_keys(), status_code=200),
+        httpx.Response(json=create_openid_keys(additional_key="test-key-2"), status_code=200),
     ]
     openid_route = respx_mock.get(openid_config_url())
     openid_route.side_effect = [
@@ -114,6 +112,8 @@ def mock_openid_empty_then_ok(respx_mock, mock_openid):
         httpx.Response(json=openid_configuration(), status_code=200),
     ]
     yield
+    assert keys_route.call_count == 2
+    assert openid_route.call_count == 2
 
 
 @respx.mock(assert_all_called=True)

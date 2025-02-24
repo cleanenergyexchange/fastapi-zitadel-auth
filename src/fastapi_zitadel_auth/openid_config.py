@@ -62,6 +62,7 @@ class OpenIdConfig(BaseModel):
     async def get_key(self, kid: str) -> RSAPublicKey:
         """Get a signing key by its ID, refreshing JWKS once if necessary."""
         if kid not in self.signing_keys:
+            log.debug("Key '%s' not found, refreshing JWKS", kid)
             await self.load_config()
 
         signing_key = self.signing_keys.get(kid)

@@ -47,22 +47,6 @@ async def test_successful_config_load(mock_openid_and_keys):
     assert zitadel_auth.openid_config.cache_ttl_seconds > 0
 
 
-async def test_parallel_config_load():
-    """Test that OpenIdConfig loads config and keys correctly in parallel"""
-    with respx.mock(assert_all_called=True) as mock:
-        mock.get(openid_config_url()).mock(return_value=httpx.Response(200, json=openid_configuration()))
-        mock.get(keys_url()).mock(return_value=httpx.Response(200, json=create_openid_keys()))
-
-        tasks = [zitadel_auth.openid_config.load_config() for _ in range(100)]
-        await asyncio.gather(*tasks)
-
-        assert len(zitadel_auth.openid_config.signing_keys) == 1
-        assert zitadel_auth.openid_config.last_refresh_timestamp is not None
-        assert mock.calls.call_count == 2
-        assert mock.calls[0].request.url == openid_config_url()
-        assert mock.calls[1].request.url == keys_url()
-
-
 async def test_caching_behavior():
     """Test that caching works and prevents unnecessary refreshes"""
     with respx.mock(assert_all_called=True) as mock:

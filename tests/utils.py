@@ -172,7 +172,7 @@ def create_test_token(
     return jwt.encode(claims, private_key, algorithm="RS256", headers=headers)
 
 
-def create_openid_keys(empty_keys: bool = False, no_valid_keys: bool = False) -> dict:
+def create_openid_keys(empty_keys: bool = False, no_valid_keys: bool = False, additional_key: str = "") -> dict:
     """
     Create OpenID keys
     """
@@ -190,6 +190,31 @@ def create_openid_keys(empty_keys: bool = False, no_valid_keys: bool = False) ->
                     "n": "rXjVHSfeFS5rtqtDSpdBwolJcteLCDOPVZV8WR0IGrYM7x0fssPimzdWr4PzNY0JvX8CCkYpD99iPhNpwzArC27T2EXrVJmwE93SeyAbwLAXE21h3GIE18UM82y7p7GM-kTc9E9Icvr8UeF9mprARXKVDNq6KdDrwOU70BmUO_FOMBRKpjwIyI1OLIOP69qQ7c6sDLiaQsBHcwolGvMMunzyCLtgWEb6rjRG5wDwu1syqVK4ADWbipFoqx4NGOXzU0yeaiSqnBeu2eJh7r6MTp41IdVz9FPnA0HTXLB3pJZspbDB27g9u1F8RhpDNFYbgcX4YJB6CO6DCKOYEmTxUw",
                     "e": "AQAB",
                 }
+            ]
+        }
+    elif additional_key:
+        return {
+            "keys": [
+                {
+                    "use": "sig",
+                    "kid": "test-key-1",
+                    "kty": "RSA",
+                    "alg": "RS256",
+                    **jwt.algorithms.RSAAlgorithm.to_jwk(
+                        valid_key.public_key(),
+                        as_dict=True,
+                    ),
+                },
+                {
+                    "use": "sig",
+                    "kid": additional_key,
+                    "kty": "RSA",
+                    "alg": "RS256",
+                    **jwt.algorithms.RSAAlgorithm.to_jwk(
+                        valid_key.public_key(),
+                        as_dict=True,
+                    ),
+                },
             ]
         }
     else:

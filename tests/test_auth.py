@@ -316,7 +316,7 @@ async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_t
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", kid="test-key-2")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 200
