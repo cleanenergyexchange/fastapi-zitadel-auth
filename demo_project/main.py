@@ -25,7 +25,7 @@ settings = get_settings()
 
 # setup logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=settings.LOG_LEVEL)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger.info(f"Settings: {settings.model_dump_json()}")
@@ -63,7 +63,7 @@ app = FastAPI(
 # Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8001"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -28,6 +28,7 @@ zitadel_auth = ZitadelAuth(
         "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
         "urn:zitadel:iam:org:projects:roles": "Projects roles",
     },
+    token_leeway=3,
 )
 
 

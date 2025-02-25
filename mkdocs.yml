@@ -76,3 +76,4 @@ nav:
   - Contributing:
         - Features and bugfixes: features-and-bugfixes.md
         - Documentation: writing-documentation.md
+        - Load testing: load-testing.md

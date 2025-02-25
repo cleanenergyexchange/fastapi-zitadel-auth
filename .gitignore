@@ -2,6 +2,9 @@
 # private key file from Zitadel
 *.json
 
+# token file for load testing
+./locust/token.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
