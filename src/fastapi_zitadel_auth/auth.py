@@ -50,6 +50,7 @@ class ZitadelAuth(SecurityBase):
         app_client_id: str,
         allowed_scopes: dict[str, str],
         token_leeway: float = 0,
+        cache_ttl_seconds: int = 600,
         claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
         user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
     ) -> None:
@@ -74,6 +75,9 @@ class ZitadelAuth(SecurityBase):
 
         :param token_leeway: float
             The tolerance time in seconds for token validation
+
+        :param cache_ttl_seconds: int
+            The time in seconds to cache the OpenID configuration
 
         :param claims_model: Type[ClaimsT]
             The claims model to use, e.g. DefaultZitadelClaims. See user.py
@@ -102,6 +106,7 @@ class ZitadelAuth(SecurityBase):
             authorization_url=f"{self.issuer_url}/oauth/v2/authorize",
             token_url=f"{self.issuer_url}/oauth/v2/token",
             jwks_uri=f"{self.issuer_url}/oauth/v2/keys",
+            cache_ttl_seconds=cache_ttl_seconds,
         )
 
         self.oauth = OAuth2AuthorizationCodeBearer(
@@ -131,25 +136,16 @@ class ZitadelAuth(SecurityBase):
             self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
 
             await self.openid_config.load_config()
+            signing_key = await self.openid_config.get_key(unverified_header["kid"])
 
             try:
-                signing_key = self.openid_config.get_signing_key(unverified_header["kid"])
-                if signing_key is not None:
-                    verified_claims = self.token_validator.verify(
-                        token=access_token,
-                        key=signing_key,
-                        audiences=[self.client_id, self.project_id],
-                        issuer=self.openid_config.issuer_url,
-                        token_leeway=self.token_leeway,
-                    )
-
-                    user: UserT = self.user_model(  # type: ignore
-                        claims=self.claims_model.model_validate(verified_claims),
-                        access_token=access_token,
-                    )
-                    # Add the user to the request state
-                    request.state.user = user
-                    return user
+                verified_claims = self.token_validator.verify(
+                    token=access_token,
+                    key=signing_key,
+                    audiences=[self.client_id, self.project_id],
+                    issuer=self.openid_config.issuer_url,
+                    token_leeway=self.token_leeway,
+                )
             except (
                 InvalidAudienceError,
                 InvalidIssuerError,
@@ -173,8 +169,14 @@ class ZitadelAuth(SecurityBase):
                 log.exception(f"Unable to process jwt token. Uncaught error: {error}")
                 raise UnauthorizedException("Unable to process token") from error
 
-            log.warning("Unable to verify token, no signing keys found")
-            raise UnauthorizedException("Unable to verify token, no signing keys found")
+            else:
+                user: UserT = self.user_model(  # type: ignore
+                    claims=self.claims_model.model_validate(verified_claims),
+                    access_token=access_token,
+                )
+                # Add the user to the request state
+                request.state.user = user
+                return user
 
         except (UnauthorizedException, InvalidRequestException, ForbiddenException, HTTPException):
             raise
