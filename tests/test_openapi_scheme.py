@@ -4,11 +4,12 @@ Test the OpenAPI schema.
 
 import openapi_spec_validator
 
+from fastapi_zitadel_auth import __version__
 from tests.utils import ZITADEL_ISSUER
 
 openapi_schema = {
     "openapi": "3.1.0",
-    "info": {"title": "fastapi-zitadel-auth demo", "version": "0.2.0"},
+    "info": {"title": "fastapi-zitadel-auth demo", "version": __version__},
     "paths": {
         "/api/public": {
             "get": {

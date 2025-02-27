@@ -6,6 +6,7 @@ from typing import Iterator
 
 import httpx
 import pytest
+import respx
 from blockbuster import blockbuster_ctx, BlockBuster
 from starlette.testclient import TestClient
 
@@ -14,10 +15,11 @@ from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from tests.utils import (
     create_openid_keys,
-    ZITADEL_ISSUER,
     openid_config_url,
+    openid_configuration,
     keys_url,
     ZITADEL_CLIENT_ID,
+    ZITADEL_ISSUER,
     ZITADEL_PROJECT_ID,
 )
 
@@ -45,115 +47,11 @@ def blockbuster() -> Iterator[BlockBuster]:
 @pytest.fixture(autouse=True)
 async def reset_openid_config():
     """Reset the OpenID configuration before each test"""
-    zitadel_auth.openid_config.last_refresh_timestamp = None
-    zitadel_auth.openid_config.signing_keys = {}
+    zitadel_auth.openid_config.reset_cache()
     yield
 
 
-def openid_configuration() -> dict:
-    """OpenID configuration fixture"""
-    return {
-        "issuer": ZITADEL_ISSUER,
-        "authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
-        "token_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/token",
-        "introspection_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/introspect",
-        "userinfo_endpoint": f"{ZITADEL_ISSUER}/oidc/v1/userinfo",
-        "revocation_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/revoke",
-        "end_session_endpoint": f"{ZITADEL_ISSUER}/oidc/v1/end_session",
-        "device_authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/device_authorization",
-        "jwks_uri": f"{ZITADEL_ISSUER}/oauth/v2/keys",
-        "scopes_supported": [
-            "openid",
-            "profile",
-            "email",
-            "phone",
-            "address",
-            "offline_access",
-        ],
-        "response_types_supported": ["code", "id_token", "id_token token"],
-        "response_modes_supported": ["query", "fragment", "form_post"],
-        "grant_types_supported": [
-            "authorization_code",
-            "implicit",
-            "refresh_token",
-            "client_credentials",
-            "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            "urn:ietf:params:oauth:grant-type:device_code",
-        ],
-        "subject_types_supported": ["public"],
-        "id_token_signing_alg_values_supported": ["RS256"],
-        "request_object_signing_alg_values_supported": ["RS256"],
-        "token_endpoint_auth_methods_supported": [
-            "none",
-            "client_secret_basic",
-            "client_secret_post",
-            "private_key_jwt",
-        ],
-        "token_endpoint_auth_signing_alg_values_supported": ["RS256"],
-        "revocation_endpoint_auth_methods_supported": [
-            "none",
-            "client_secret_basic",
-            "client_secret_post",
-            "private_key_jwt",
-        ],
-        "revocation_endpoint_auth_signing_alg_values_supported": ["RS256"],
-        "introspection_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "private_key_jwt",
-        ],
-        "introspection_endpoint_auth_signing_alg_values_supported": ["RS256"],
-        "claims_supported": [
-            "sub",
-            "aud",
-            "exp",
-            "iat",
-            "iss",
-            "auth_time",
-            "nonce",
-            "acr",
-            "amr",
-            "c_hash",
-            "at_hash",
-            "act",
-            "scopes",
-            "client_id",
-            "azp",
-            "preferred_username",
-            "name",
-            "family_name",
-            "given_name",
-            "locale",
-            "email",
-            "email_verified",
-            "phone_number",
-            "phone_number_verified",
-        ],
-        "code_challenge_methods_supported": ["S256"],
-        "ui_locales_supported": [
-            "bg",
-            "cs",
-            "de",
-            "en",
-            "es",
-            "fr",
-            "hu",
-            "id",
-            "it",
-            "ja",
-            "ko",
-            "mk",
-            "nl",
-            "pl",
-            "pt",
-            "ru",
-            "sv",
-            "zh",
-        ],
-        "request_parameter_supported": True,
-        "request_uri_parameter_supported": False,
-    }
-
-
+@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid(respx_mock):
     """Fixture to mock OpenID configuration"""
@@ -161,6 +59,7 @@ def mock_openid(respx_mock):
     yield
 
 
+@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and keys"""
@@ -168,6 +67,7 @@ def mock_openid_and_keys(respx_mock, mock_openid):
     yield
 
 
+@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_empty_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and empty keys"""
@@ -175,13 +75,36 @@ def mock_openid_and_empty_keys(respx_mock, mock_openid):
     yield
 
 
+@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_ok_then_empty(respx_mock, mock_openid):
-    """Fixture to mock OpenID configuration and keys, first empty then ok"""
+    """
+    Fixture to mock OpenID configuration and keys, first with keys then empty.
+    """
     keys_route = respx_mock.get(keys_url())
     keys_route.side_effect = [
         httpx.Response(json=create_openid_keys(), status_code=200),
         httpx.Response(json=create_openid_keys(empty_keys=True), status_code=200),
+        httpx.Response(json=create_openid_keys(empty_keys=True), status_code=200),
+    ]
+    openid_route = respx_mock.get(openid_config_url())
+    openid_route.side_effect = [
+        httpx.Response(json=openid_configuration(), status_code=200),
+        httpx.Response(json=openid_configuration(), status_code=200),
+        httpx.Response(json=openid_configuration(), status_code=200),
+    ]
+    yield
+    assert keys_route.call_count == 3
+    assert openid_route.call_count == 3
+
+
+@respx.mock(assert_all_called=True)
+@pytest.fixture
+def mock_openid_empty_then_ok(respx_mock, mock_openid):
+    keys_route = respx_mock.get(keys_url())
+    keys_route.side_effect = [
+        httpx.Response(json=create_openid_keys(empty_keys=True), status_code=200),
+        httpx.Response(json=create_openid_keys(additional_key="test-key-2"), status_code=200),
     ]
     openid_route = respx_mock.get(openid_config_url())
     openid_route.side_effect = [
@@ -189,8 +112,11 @@ def mock_openid_ok_then_empty(respx_mock, mock_openid):
         httpx.Response(json=openid_configuration(), status_code=200),
     ]
     yield
+    assert keys_route.call_count == 2
+    assert openid_route.call_count == 2
 
 
+@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_no_valid_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and keys with no valid keys"""

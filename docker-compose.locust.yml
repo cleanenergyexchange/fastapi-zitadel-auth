@@ -1,0 +1,50 @@
+services:
+  locust-master:
+    build:
+      context: .
+      dockerfile: ./locust/Dockerfile
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./locust:/mnt/locust
+      - ./service_user.json:/app/service_user.json
+    env_file:
+      - demo_project/.env
+    environment:
+      - LOCUST_MODE=master
+      - LOCUST_LOCUSTFILE=/mnt/locust/locustfile.py
+      - SERVICE_USER_KEY_FILE=/app/service_user.json
+      - API_HOST=http://demo-api:8001
+      - ZITADEL_ROLE=${ZITADEL_ROLE:-system}
+    command: -f /mnt/locust/locustfile.py --master -H http://demo-api:8001
+
+  locust-worker:
+    build:
+      context: .
+      dockerfile: ./locust/Dockerfile
+    volumes:
+      - ./locust:/mnt/locust
+      - ./service_user.json:/app/service_user.json
+    env_file:
+      - demo_project/.env
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_HOST=locust-master
+      - LOCUST_MASTER_PORT=5557
+      - SERVICE_USER_KEY_FILE=/app/service_user.json
+      - API_HOST=http://demo-api:8001
+      - ZITADEL_ROLE=${ZITADEL_ROLE:-system}
+    command: -f /mnt/locust/locustfile.py --worker --master-host locust-master
+    depends_on:
+      - locust-master
+
+  demo-api:
+    build:
+      context: .
+      dockerfile: ./demo_project/Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./service_user.json:/app/service_user.json
+    env_file:
+      - demo_project/.env

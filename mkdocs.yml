@@ -34,7 +34,7 @@ theme:
     - content.code.annotate
 
 extra_css:
-  - css/extra.css
+  - static/css/extra.css
 
 
 markdown_extensions:
@@ -76,3 +76,4 @@ nav:
   - Contributing:
         - Features and bugfixes: features-and-bugfixes.md
         - Documentation: writing-documentation.md
+        - Load testing: load-testing.md

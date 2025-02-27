@@ -5,20 +5,37 @@ Check out the **code folder under [demo_project](https://github.com/cleanenergye
 
 ## Starting the FastAPI server
 
-* Run the demo app using `uv`:
+* Run the demo server using `uv`:
 
 ```bash
 uv run demo_project/main.py
 ```
 
-* Navigate to [http://localhost:8001/docs](http://localhost:8001/docs) to see the Swagger UI.
+## Login
+
+!!! info "User types in Zitadel"
+
+    Zitadel differentiates [two types of users](https://zitadel.com/docs/guides/manage/console/users):
+
+    1. **Users** ("human users", i.e. people with a login)
+    2. **Service users** ("machine users", i.e. integration bots).
+
+
+
+### User login
+
+* Navigate to [http://localhost:8001/docs](http://localhost:8001/docs).
+* Click on the **Authorize** button in the top right corner.
+* Click on the **Authorize** button in the modal.
+* You should be redirected to the Zitadel login page.
+* Log in with your Zitadel credentials.
+* You should be redirected back to the FastAPI docs page.
+* You can now try out the endpoints in the docs page.
+* If you encounter issues, try again in a private browsing window.
 
 
 ## Service user login
 
-!!! note "Service Users"
-
-    Service users are "machine users", see [Zitadel user types](https://zitadel.com/docs/guides/manage/console/users).
 
 * Set up a service user as described in the [setup guide](zitadel-setup.md).
 * Download the private key from Zitadel.
