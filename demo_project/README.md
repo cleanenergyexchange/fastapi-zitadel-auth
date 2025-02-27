@@ -1,4 +1,4 @@
-# Demo Project
+# Demo project
 
 This is a demo project for the `fastapi-zitadel-auth` package.
 
