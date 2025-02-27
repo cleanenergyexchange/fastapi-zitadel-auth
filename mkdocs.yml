@@ -34,7 +34,7 @@ theme:
     - content.code.annotate
 
 extra_css:
-  - css/extra.css
+  - static/css/extra.css
 
 
 markdown_extensions:
