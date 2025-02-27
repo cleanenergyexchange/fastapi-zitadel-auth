@@ -5,6 +5,9 @@
 # token file for load testing
 ./locust/token.txt
 
+# macOS
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
