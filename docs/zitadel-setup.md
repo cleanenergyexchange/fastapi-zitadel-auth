@@ -110,3 +110,5 @@ For more information, see [Zitadel user types](https://zitadel.com/docs/guides/m
      - Project Id
      - Issuer URL
      - API application client Id
+
+    Use these values in the FastAPI application configuration (see next steps).
