@@ -34,7 +34,7 @@ class OpenIdConfig(BaseModel):
             log.debug("Loading OpenID configuration.")
             current_time = datetime.now()
             try:
-                async with httpx.AsyncClient(timeout=10) as client:
+                async with httpx.AsyncClient(timeout=10, http2=True) as client:
                     config = await self._fetch_config(client)
                     new_keys = await self._fetch_jwks(client)
 
