@@ -1,4 +1,4 @@
-# Load Testing
+# Load testing
 
 Guide for load testing the `fastapi-zitadel-auth` package.
 

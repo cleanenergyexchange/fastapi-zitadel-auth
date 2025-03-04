@@ -34,7 +34,7 @@ uv run demo_project/main.py
 * If you encounter issues, try again in a private browsing window.
 
 
-## Service user login
+### Service user login
 
 
 * Set up a service user as described in the [setup guide](zitadel-setup.md).

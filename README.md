@@ -37,7 +37,7 @@
 ## Features
 
 * Authorization Code flow with PKCE
-* JWT validation using Zitadel JWKS
+* JWT validation using JWKS
 * Role-based access control using Zitadel roles
 * Service user authentication (JWT Profile)
 * Swagger UI integration
@@ -49,7 +49,7 @@
 > **Note:** This library implements JWT, locally validated using JWKS, as it prioritizes performance, 
 see [Zitadel docs on Opaque tokens vs JWT](https://zitadel.com/docs/concepts/knowledge/opaque-tokens#use-cases-and-trade-offs). 
 If you need to validate opaque tokens using Introspection, 
-please [open an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues) – PRs are welcome!
+please [open an issue](https://github.com/cleanenergyexchange/fastapi-zitadel-auth/issues?q=is%3Aissue%20state%3Aopen%20introspection) – PRs are welcome!
 
 
 ## License
