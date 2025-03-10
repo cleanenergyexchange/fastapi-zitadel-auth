@@ -22,9 +22,6 @@
 <a href="https://mypy-lang.org">
     <img src="https://www.mypy-lang.org/static/mypy_badge.svg" alt="mypy">
 </a>
-<a href="https://github.com/cleanenergyexchange/fastapi-zitadel-auth/blob/main/LICENCE">
-    <img src="https://badgen.net/github/license/cleanenergyexchange/fastapi-zitadel-auth/" alt="License"/>
-</a>
 
 ---
 
@@ -43,6 +40,7 @@
 * Swagger UI integration
 * Type-safe token validation
 * Extensible claims and user models
+* Async loading of OpenID configuration
 
 
 
