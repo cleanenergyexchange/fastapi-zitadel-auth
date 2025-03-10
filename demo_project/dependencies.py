@@ -37,5 +37,5 @@ async def validate_is_admin_user(
 ) -> None:
     """Validate that the authenticated user is a user with a specific role"""
     required_role = "admin"
-    if required_role not in user.claims.project_roles.keys():
+    if required_role not in user.claims.project_roles:
         raise ForbiddenException(f"User does not have role assigned: {required_role}")

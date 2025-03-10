@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=settings.LOG_LEVEL)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
-logger.info(f"Settings: {settings.model_dump_json()}")
+logging.getLogger("hpack").setLevel(logging.WARNING)
+logger.debug(f"Settings: {settings.model_dump_json()}")
 
 
 @asynccontextmanager
