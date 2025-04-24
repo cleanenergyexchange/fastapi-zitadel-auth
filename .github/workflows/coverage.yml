@@ -1,14 +1,14 @@
-name: Test
+name: Coverage
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
-  test:
-    name: Run Tests
+  codecov:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -18,8 +18,8 @@ jobs:
         with:
           cache-dependency-glob: "uv.lock"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python 3.13
+        run: uv python install 3.13
 
       - name: Install dependencies
         run: |
@@ -28,3 +28,9 @@ jobs:
       - name: Run tests
         run: |
           uv run pytest tests/ -v --cov=src --cov=tests --cov-report=xml --cov-fail-under=100
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
