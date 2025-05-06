@@ -66,7 +66,7 @@ class OpenIdConfig(BaseModel):
             log.debug("Key '%s' not found, refreshing JWKS", kid)
             self.reset_cache()
             await self.load_config()
-            await self.idle()
+            await self._sleep()
 
             if kid not in self.signing_keys:
                 log.error(f"Unable to verify token, no signing keys found for key with ID: '{kid}'")
@@ -80,7 +80,7 @@ class OpenIdConfig(BaseModel):
         log.debug("Reset OpenID configuration cache")
 
     @staticmethod
-    async def idle():
+    async def _sleep():
         """Wait for a short period to allow other tasks to run."""
         log.debug("Waiting for other tasks to finish...")
         await asyncio.sleep(1)

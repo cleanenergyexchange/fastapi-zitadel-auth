@@ -287,7 +287,7 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
 
 async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_then_ok, mocker):
     """Test that the OpenID configuration is refreshed if the key ID is initially not found."""
-    sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig.idle")
+    sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

@@ -41,8 +41,6 @@ def fastapi_app():
 def blockbuster() -> Iterator[BlockBuster]:
     """Detect blocking calls within an asynchronous event loop"""
     with blockbuster_ctx() as bb:
-        bb.functions["io.TextIOWrapper.write"].deactivate()
-        bb.functions["io.BufferedWriter.write"].deactivate()
         yield bb
 
 
