@@ -1,3 +1,4 @@
+import asyncio
 from asyncio import Lock
 from datetime import datetime, timedelta
 import logging
@@ -63,19 +64,26 @@ class OpenIdConfig(BaseModel):
         """Get a signing key by its ID, refreshing JWKS once if necessary."""
         if kid not in self.signing_keys:
             log.debug("Key '%s' not found, refreshing JWKS", kid)
+            self.reset_cache()
             await self.load_config()
+            await self._sleep()
 
-        signing_key = self.signing_keys.get(kid)
-        if signing_key is None:
-            log.error(f"Unable to verify token, no signing keys found for key with ID: '{kid}'")
-            raise UnauthorizedException("Unable to verify token, no signing keys found")
-        return signing_key
+            if kid not in self.signing_keys:
+                log.error(f"Unable to verify token, no signing keys found for key with ID: '{kid}'")
+                raise UnauthorizedException("Unable to verify token, no signing keys found")
+        return self.signing_keys[kid]
 
     def reset_cache(self) -> None:
         """Reset the cache by clearing the timestamp and keys."""
         self.last_refresh_timestamp = None
         self.signing_keys = {}
         log.debug("Reset OpenID configuration cache")
+
+    @staticmethod
+    async def _sleep():
+        """Wait for a short period to allow other tasks to run."""
+        log.debug("Waiting for other tasks to finish...")
+        await asyncio.sleep(1)
 
     def _needs_refresh(self) -> bool:
         """Check if the cached keys should be refreshed based on cache state or time elapsed."""
