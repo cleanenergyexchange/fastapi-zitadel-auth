@@ -110,6 +110,7 @@ class TestZitadelAuth:
             "iat": 1234567890,
             "iss": "test_issuer",
             "sub": "user123",
+            "nbf": 1234567890,
             "jti": "token123",
             "custom_field": "custom_value",
             "role": "admin",

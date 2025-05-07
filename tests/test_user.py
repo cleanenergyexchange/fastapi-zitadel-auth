@@ -30,6 +30,7 @@ def valid_claims_data() -> dict:
         "iat": now,
         "iss": ZITADEL_ISSUER,
         "sub": sub,
+        "nbf": now,
         "jti": "unique-token-id",
     }
 

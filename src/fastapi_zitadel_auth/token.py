@@ -70,7 +70,7 @@ class TokenValidator:
         options = {
             "verify_signature": True,
             "verify_exp": True,
-            "verify_nbf": False,
+            "verify_nbf": True,
             "verify_iat": True,
             "verify_aud": True,
             "verify_iss": True,

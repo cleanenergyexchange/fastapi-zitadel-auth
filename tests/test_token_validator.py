@@ -41,6 +41,7 @@ def valid_token(rsa_keys) -> str:
         "aud": [ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
         "exp": now + 3600,
         "iat": now,
+        "nbf": now,
         "jti": "unique-token-id",
     }
 
@@ -202,6 +203,7 @@ class TestTokenValidator:
             "aud": [ZITADEL_CLIENT_ID],
             "exp": now - 3600,  # Expired 1 hour ago
             "iat": now - 7200,
+            "nbf": now - 7200,
             "jti": "unique-token-id",
         }
 
