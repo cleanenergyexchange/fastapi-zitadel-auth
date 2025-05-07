@@ -1,7 +1,7 @@
 from typing import (
     TypeVar,
     Generic,
-    Any,  # noqa
+    Any, Optional,  # noqa
 )
 
 from pydantic import BaseModel, Field, model_validator
@@ -22,6 +22,7 @@ class JwtClaims(BaseModel):
     iat: int = Field(description="Time of the token was issued at (as unix time)")
     iss: str = Field(description="Issuing domain of a token")
     sub: str = Field(description="Subject ID of the user")
+    nbf: Optional[int] = None
     jti: str = Field(description="Unique id of the token")
 
 
