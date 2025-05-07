@@ -50,7 +50,6 @@ async def test_admin_user(fastapi_app, mock_openid_and_keys):
                     "iat": issued_at,
                     "iss": ZITADEL_ISSUER,
                     "jti": "unique-token-id",
-                    "nbf": issued_at,
                     "project_roles": {
                         "admin": {
                             "role_id": ZITADEL_PRIMARY_DOMAIN,

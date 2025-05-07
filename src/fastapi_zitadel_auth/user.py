@@ -22,7 +22,6 @@ class JwtClaims(BaseModel):
     iat: int = Field(description="Time of the token was issued at (as unix time)")
     iss: str = Field(description="Issuing domain of a token")
     sub: str = Field(description="Subject ID of the user")
-    nbf: int = Field(description="Time the token must not be used before (as unix time)")
     jti: str = Field(description="Unique id of the token")
 
 

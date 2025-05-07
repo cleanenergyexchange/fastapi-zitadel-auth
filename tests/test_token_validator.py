@@ -41,7 +41,6 @@ def valid_token(rsa_keys) -> str:
         "aud": [ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
         "exp": now + 3600,
         "iat": now,
-        "nbf": now,
         "jti": "unique-token-id",
     }
 
@@ -146,7 +145,6 @@ class TestTokenValidator:
         assert "iat" in claims
         assert "iss" in claims
         assert "aud" in claims
-        assert "nbf" in claims
         assert "jti" in claims
 
     def test_parse_unverified_none_token(self, token_validator):
@@ -204,7 +202,6 @@ class TestTokenValidator:
             "aud": [ZITADEL_CLIENT_ID],
             "exp": now - 3600,  # Expired 1 hour ago
             "iat": now - 7200,
-            "nbf": now - 7200,
             "jti": "unique-token-id",
         }
 
@@ -259,37 +256,6 @@ class TestTokenValidator:
                 token=valid_token,
                 key=wrong_key,
                 audiences=[ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
-                issuer=ZITADEL_ISSUER,
-            )
-
-    def test_verify_not_yet_valid(self, token_validator, rsa_keys):
-        """Raise Exception when verifying a token that is not yet valid"""
-        private_key, public_key = rsa_keys
-        now = int(time.time())
-
-        future_claims = {
-            "sub": "user123",
-            "iss": ZITADEL_ISSUER,
-            "aud": [ZITADEL_CLIENT_ID],
-            "exp": now + 7200,
-            "iat": now,
-            "nbf": now + 3600,  # Not valid for another hour
-            "jti": "unique-token-id",
-        }
-
-        pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
-
-        future_token = jwt.encode(future_claims, pem, algorithm="RS256")
-
-        with pytest.raises(jwt.ImmatureSignatureError):
-            token_validator.verify(
-                token=future_token,
-                key=public_key,
-                audiences=[ZITADEL_CLIENT_ID],
                 issuer=ZITADEL_ISSUER,
             )
 

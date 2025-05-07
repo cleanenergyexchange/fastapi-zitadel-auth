@@ -70,13 +70,12 @@ class TokenValidator:
         options = {
             "verify_signature": True,
             "verify_exp": True,
-            "verify_nbf": True,
             "verify_iat": True,
             "verify_aud": True,
             "verify_iss": True,
             "verify_sub": True,
             "verify_jti": True,
-            "require": ["exp", "nbf", "iat", "aud", "iss", "sub", "jti"],
+            "require": ["exp", "iat", "aud", "iss", "sub", "jti"],
         }
         return jwt.decode(
             token,

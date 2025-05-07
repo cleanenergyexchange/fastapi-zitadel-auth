@@ -151,7 +151,6 @@ def create_test_token(
         "iat": int(now.timestamp()),
         "iss": "wrong-issuer" if invalid_iss else ZITADEL_ISSUER,
         "sub": "user123",
-        "nbf": int(now.timestamp()),
         "jti": "unique-token-id",
         "scope": scopes,
     }
