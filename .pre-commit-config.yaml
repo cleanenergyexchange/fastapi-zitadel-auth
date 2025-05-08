@@ -4,10 +4,10 @@ repos:
     rev: v0.11.8
     hooks:
       - id: ruff
-        entry: uv run --active ruff check src/
+        entry: uv run ruff check src/
         files: \.py$
       - id: ruff-format
-        entry: uv run --active ruff format src/
+        entry: uv run ruff format src/
         files: \.py$
 
   - repo: https://github.com/econchick/interrogate
