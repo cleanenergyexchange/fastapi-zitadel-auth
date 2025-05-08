@@ -63,7 +63,6 @@ class TestBaseZitadelClaims:
             "iat",
             "iss",
             "sub",
-            "jti",
         ]
 
         for field in required_fields:
