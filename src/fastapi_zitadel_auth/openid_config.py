@@ -80,7 +80,7 @@ class OpenIdConfig(BaseModel):
         log.debug("Reset OpenID configuration cache")
 
     @staticmethod
-    async def _sleep():
+    async def _sleep() -> None:
         """Wait for a short period to allow other tasks to run."""
         log.debug("Waiting for other tasks to finish...")
         await asyncio.sleep(1)
