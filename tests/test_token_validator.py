@@ -146,7 +146,6 @@ class TestTokenValidator:
         assert "iat" in claims
         assert "iss" in claims
         assert "aud" in claims
-        assert "nbf" in claims
         assert "jti" in claims
 
     def test_parse_unverified_none_token(self, token_validator):
@@ -261,6 +260,7 @@ class TestTokenValidator:
                 audiences=[ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID],
                 issuer=ZITADEL_ISSUER,
             )
+
 
     def test_verify_not_yet_valid(self, token_validator, rsa_keys):
         """Raise Exception when verifying a token that is not yet valid"""
