@@ -146,6 +146,8 @@ class TestTokenValidator:
         assert "iat" in claims
         assert "iss" in claims
         assert "aud" in claims
+        assert "nbf" in claims
+        assert "jti" in claims
 
     def test_parse_unverified_none_token(self, token_validator):
         """Test that the TokenValidator raises an exception when parsing a None token"""
