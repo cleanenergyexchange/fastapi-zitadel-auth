@@ -64,9 +64,9 @@ class OpenIdConfig(BaseModel):
         """Get a signing key by its ID, refreshing JWKS once if necessary."""
         if kid not in self.signing_keys:
             log.debug("Key '%s' not found, refreshing JWKS", kid)
+            await self._sleep()
             self.reset_cache()
             await self.load_config()
-            await self._sleep()
 
             if kid not in self.signing_keys:
                 log.error(f"Unable to verify token, no signing keys found for key with ID: '{kid}'")
