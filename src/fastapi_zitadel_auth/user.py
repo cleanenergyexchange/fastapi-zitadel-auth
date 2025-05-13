@@ -23,7 +23,7 @@ class JwtClaims(BaseModel):
     iss: str = Field(description="Issuing domain of a token")
     sub: str = Field(description="Subject ID of the user")
     nbf: int | None = Field(default=None, description="Time the token must not be used before (as unix time)")
-    jti: str = Field(description="Unique id of the token")
+    jti: str | None = Field(default=None, description="Unique id of the token")
 
 
 class BaseZitadelUser(BaseModel, Generic[ClaimsT]):

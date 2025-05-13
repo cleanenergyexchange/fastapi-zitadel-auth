@@ -76,7 +76,7 @@ class TokenValidator:
             "verify_iss": True,
             "verify_sub": True,
             "verify_jti": True,
-            "require": ["exp", "iat", "aud", "iss", "sub", "jti"],
+            "require": ["exp", "iat", "aud", "iss", "sub"],
         }
         return jwt.decode(
             token,
