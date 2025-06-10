@@ -9,6 +9,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+        fastapi-version: [ "0.112.4", "0.115.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +23,10 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --dev
+
+      - name: Install FastAPI ${{ matrix.fastapi-version }}
+        run: |
+          uv add fastapi==${{ matrix.fastapi-version }}
 
       - name: Run tests
         run: |
