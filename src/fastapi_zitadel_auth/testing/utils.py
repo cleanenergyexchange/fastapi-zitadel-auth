@@ -300,16 +300,19 @@ class MockZitadelAuth(ZitadelAuth):
     
     async def __call__(self, request, security_scopes):
         """Return mock user data and set it in request.state, bypassing token validation"""
-        mock_user_data = {
+        mock_claims_data = {
             "sub": self.mock_user_id,
-            "scope": " ".join(self.mock_scopes),
             "aud": [self.project_id, self.client_id],
             "iss": self.issuer_url,
             "client_id": self.client_id,
+            "exp": 9999999999,  # Far future
+            "iat": 1000000000,  # Past
+            "scope": " ".join(self.mock_scopes),
         }
         
         # Create mock user object using the configured user model
-        mock_user = self.user_model(**mock_user_data)
+        mock_claims = self.claims_model(**mock_claims_data)
+        mock_user = self.user_model(claims=mock_claims, access_token="mock-access-token")
         
         # Set user in request state like the real ZitadelAuth does
         if hasattr(request, 'state'):
