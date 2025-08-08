@@ -168,7 +168,7 @@ async def test_expired_token(fastapi_app, mock_openid_and_keys):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"Authorization": "Bearer " + create_test_token(expired=True)},
+        headers={"Authorization": "Bearer " + create_test_token(expired=True, scopes="scope1")},
     ) as ac:
         response = await ac.get("/api/protected/scope")
     assert response.status_code == 401
@@ -292,7 +292,7 @@ async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_t
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"Authorization": "Bearer " + create_test_token(role="admin", kid="test-key-2")},
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", kid="rotated-key")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 200

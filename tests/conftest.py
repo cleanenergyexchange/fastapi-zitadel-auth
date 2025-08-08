@@ -4,7 +4,9 @@ Pytest conftest.py file to define fixtures available to all tests
 
 from typing import Iterator
 
+import httpx
 import pytest
+import respx
 from blockbuster import blockbuster_ctx, BlockBuster
 from starlette.testclient import TestClient
 
@@ -12,6 +14,10 @@ from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.testing import (
+    create_openid_keys,
+    openid_config_url,
+    openid_configuration,
+    keys_url,
     ZITADEL_CLIENT_ID,
     ZITADEL_ISSUER,
     ZITADEL_PROJECT_ID,

@@ -126,3 +126,11 @@ def mock_openid_empty_then_ok():
             httpx.Response(json=create_openid_keys(additional_key="rotated-key"), status_code=200),
         ]
         yield respx_mock
+
+
+# Descriptive aliases for better readability in new code
+mock_openid_config = mock_openid
+mock_openid_keys = mock_openid_and_keys
+mock_openid_empty_keys = mock_openid_and_empty_keys
+mock_openid_key_rotation = mock_openid_empty_then_ok
+mock_openid_invalid_keys = mock_openid_and_no_valid_keys
