@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 from fastapi_zitadel_auth.token import TokenValidator
-from tests.utils import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
+from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
 
 @pytest.fixture(scope="module")

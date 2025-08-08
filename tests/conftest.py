@@ -13,7 +13,7 @@ from starlette.testclient import TestClient
 from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
-from tests.utils import (
+from fastapi_zitadel_auth.testing import (
     create_openid_keys,
     openid_config_url,
     openid_configuration,

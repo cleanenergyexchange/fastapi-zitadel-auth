@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from demo_project.main import app
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.token import TokenValidator
-from tests.utils import (
+from fastapi_zitadel_auth.testing import (
     create_test_token,
     ZITADEL_PRIMARY_DOMAIN,
     ZITADEL_ISSUER,

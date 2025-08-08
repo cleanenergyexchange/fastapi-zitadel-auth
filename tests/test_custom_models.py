@@ -8,7 +8,7 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
-from tests.utils import ZITADEL_ISSUER
+from fastapi_zitadel_auth.testing import ZITADEL_ISSUER
 
 
 class CustomClaims(JwtClaims):

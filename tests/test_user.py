@@ -12,7 +12,7 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
-from tests.utils import ZITADEL_ISSUER, ZITADEL_PRIMARY_DOMAIN, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
+from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_PRIMARY_DOMAIN, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
 role_key = "role1"
 role_id = "295621089671959405"
