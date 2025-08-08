@@ -15,8 +15,7 @@ from httpx import AsyncClient, ASGITransport, HTTPError
 from demo_project.dependencies import zitadel_auth
 from demo_project.main import app
 from fastapi_zitadel_auth.exceptions import UnauthorizedException
-from tests.conftest import openid_configuration
-from fastapi_zitadel_auth.testing import create_test_token, openid_config_url, keys_url, create_openid_keys
+from fastapi_zitadel_auth.testing import create_test_token, openid_config_url, keys_url, create_openid_keys, openid_configuration
 
 log = logging.getLogger(__name__)
 

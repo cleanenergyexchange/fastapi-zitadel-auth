@@ -7,18 +7,13 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
-from fastapi_zitadel_auth.testing import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url
+from fastapi_zitadel_auth.testing import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url, openid_configuration
 
 
 @pytest.fixture
 def mock_openid_config():
     """Fixture providing mock OpenID configuration data."""
-    return {
-        "issuer": ZITADEL_ISSUER,
-        "authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
-        "token_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/token",
-        "jwks_uri": f"{ZITADEL_ISSUER}/oauth/v2/keys",
-    }
+    return openid_configuration()
 
 
 @pytest.fixture

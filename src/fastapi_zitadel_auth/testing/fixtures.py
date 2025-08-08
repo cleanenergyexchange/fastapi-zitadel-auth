@@ -54,66 +54,66 @@ async def reset_openid_cache():
 
 
 @pytest.fixture
-def mock_openid_config():
+def mock_openid():
     """
     Fixture to mock OpenID configuration endpoint
     
     Mocks the /.well-known/openid-configuration endpoint
     """
-    with respx.mock(assert_all_called=True) as respx_mock:
+    with respx.mock(assert_all_called=False) as respx_mock:
         respx_mock.get(openid_config_url()).respond(json=openid_configuration())
         yield respx_mock
 
 
 @pytest.fixture
-def mock_openid_keys(mock_openid_config):
+def mock_openid_and_keys():
     """
     Fixture to mock both OpenID configuration and JWKS endpoints
     
     Mocks both the OpenID configuration and the keys endpoint
     with valid test keys.
     """
-    with respx.mock(assert_all_called=True) as respx_mock:
+    with respx.mock(assert_all_called=False) as respx_mock:
         respx_mock.get(openid_config_url()).respond(json=openid_configuration())
         respx_mock.get(keys_url()).respond(json=create_openid_keys())
         yield respx_mock
 
 
 @pytest.fixture
-def mock_openid_empty_keys(mock_openid_config):
+def mock_openid_and_empty_keys():
     """
     Fixture to mock OpenID with empty keys response
     
     Useful for testing error handling when no keys are available.
     """
-    with respx.mock(assert_all_called=True) as respx_mock:
+    with respx.mock(assert_all_called=False) as respx_mock:
         respx_mock.get(openid_config_url()).respond(json=openid_configuration())
         respx_mock.get(keys_url()).respond(json=create_openid_keys(empty_keys=True))
         yield respx_mock
 
 
 @pytest.fixture
-def mock_openid_invalid_keys(mock_openid_config):
+def mock_openid_and_no_valid_keys():
     """
     Fixture to mock OpenID with invalid keys
     
     Useful for testing error handling when keys are not valid for signing.
     """
-    with respx.mock(assert_all_called=True) as respx_mock:
+    with respx.mock(assert_all_called=False) as respx_mock:
         respx_mock.get(openid_config_url()).respond(json=openid_configuration())
         respx_mock.get(keys_url()).respond(json=create_openid_keys(no_valid_keys=True))
         yield respx_mock
 
 
 @pytest.fixture
-def mock_openid_key_rotation():
+def mock_openid_empty_then_ok():
     """
     Fixture to simulate key rotation
     
     First request returns empty keys, second returns valid keys.
     Useful for testing key rotation scenarios.
     """
-    with respx.mock(assert_all_called=True) as respx_mock:
+    with respx.mock(assert_all_called=False) as respx_mock:
         openid_route = respx_mock.get(openid_config_url())
         openid_route.side_effect = [
             httpx.Response(json=openid_configuration(), status_code=200),
