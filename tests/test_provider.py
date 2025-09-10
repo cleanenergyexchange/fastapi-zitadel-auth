@@ -20,7 +20,7 @@ from fastapi_zitadel_auth.testing import create_test_token, openid_config_url, k
 log = logging.getLogger(__name__)
 
 
-async def test_successful_config_load(mock_openid_and_keys):
+async def test_successful_config_load(mock_openid_keys):
     """Test that OpenIdConfig loads config and keys correctly"""
 
     test_start = datetime.now()

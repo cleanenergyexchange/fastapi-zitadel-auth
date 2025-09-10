@@ -3,7 +3,7 @@ Tests for the testing fixtures and utilities
 """
 
 import pytest
-from fastapi_zitadel_auth.testing.fixtures import mock_zitadel_auth, reset_openid_cache, mock_openid
+from fastapi_zitadel_auth.testing.fixtures import mock_zitadel_auth, reset_openid_cache, mock_openid_config
 from fastapi_zitadel_auth.testing.utils import MockZitadelAuth, create_test_token, openid_config_url, openid_configuration
 from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
@@ -83,10 +83,10 @@ def test_create_test_token_with_additional_claims():
     assert len(token.split('.')) == 3  # JWT has 3 parts
 
 
-def test_mock_openid_fixture(mock_openid):
+def test_mock_openid_fixture(mock_openid_config):
     """Test that the mock_openid fixture works correctly"""
     # Verify the fixture returns a respx mock
-    assert hasattr(mock_openid, 'get')
+    assert hasattr(mock_openid_config, 'get')
     
     # Test that we can make a request to the mocked endpoint
     import httpx

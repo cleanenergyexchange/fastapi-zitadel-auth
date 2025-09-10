@@ -23,11 +23,11 @@ from fastapi_zitadel_auth.testing import (
     ZITADEL_PROJECT_ID,
 )
 from fastapi_zitadel_auth.testing.fixtures import (
-    mock_openid,
-    mock_openid_and_keys,
-    mock_openid_and_empty_keys,
-    mock_openid_empty_then_ok,
-    mock_openid_and_no_valid_keys,
+    mock_openid_config,
+    mock_openid_keys,
+    mock_openid_empty_keys,
+    mock_openid_key_rotation,
+    mock_openid_invalid_keys,
 )
 
 

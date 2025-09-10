@@ -23,7 +23,7 @@ log = logging.getLogger("fastapi_zitadel_auth")
 
 
 @pytest.mark.asyncio
-async def test_admin_user(fastapi_app, mock_openid_and_keys):
+async def test_admin_user(fastapi_app, mock_openid_keys):
     """Test that with a valid token we can access the protected endpoint."""
     issued_at = int(time.time())
     expires = issued_at + 3600
@@ -62,7 +62,7 @@ async def test_admin_user(fastapi_app, mock_openid_and_keys):
         }
 
 
-async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
+async def test_no_keys_to_decode_with(fastapi_app, mock_openid_empty_keys):
     """Test that if no signing keys are found, the token cannot be decoded."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -77,7 +77,7 @@ async def test_no_keys_to_decode_with(fastapi_app, mock_openid_and_empty_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
+async def test_normal_user_rejected(fastapi_app, mock_openid_keys):
     """Test that a user without the admin role is rejected from the admin endpoint."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -92,7 +92,7 @@ async def test_normal_user_rejected(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
+async def test_invalid_token_issuer(fastapi_app, mock_openid_keys):
     """Test that a token with an invalid issuer is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -105,7 +105,7 @@ async def test_invalid_token_issuer(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
+async def test_invalid_token_audience(fastapi_app, mock_openid_keys):
     """Test that a token with an invalid audience is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -118,7 +118,7 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_keys):
+async def test_no_valid_keys_for_token(fastapi_app, mock_openid_invalid_keys):
     """Test that if no valid keys are found, the token cannot be decoded."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -133,7 +133,7 @@ async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_key
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
+async def test_no_valid_scopes(fastapi_app, mock_openid_keys):
     """Test that a token without the required scopes is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -146,7 +146,7 @@ async def test_no_valid_scopes(fastapi_app, mock_openid_and_keys):
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
+async def test_invalid_scopes_format(fastapi_app, mock_openid_keys):
     """Test that a token with invalid scope format is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -163,7 +163,7 @@ async def test_invalid_scopes_format(fastapi_app, mock_openid_and_keys):
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_expired_token(fastapi_app, mock_openid_and_keys):
+async def test_expired_token(fastapi_app, mock_openid_keys):
     """Test that an expired token is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -176,7 +176,7 @@ async def test_expired_token(fastapi_app, mock_openid_and_keys):
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
+async def test_token_signed_with_evil_key(fastapi_app, mock_openid_keys):
     """Test that a token signed with an 'evil' key is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -189,7 +189,7 @@ async def test_token_signed_with_evil_key(fastapi_app, mock_openid_and_keys):
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_malformed_token(fastapi_app, mock_openid_and_keys):
+async def test_malformed_token(fastapi_app, mock_openid_keys):
     """Test that a malformed token is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -202,7 +202,7 @@ async def test_malformed_token(fastapi_app, mock_openid_and_keys):
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
+async def test_none_token(fastapi_app, mock_openid_keys, mocker):
     """Test that when no token is available in the request, it is rejected."""
     mocker.patch.object(ZitadelAuth, "_extract_access_token", return_value=None)
     async with AsyncClient(
@@ -215,7 +215,7 @@ async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
         assert response.json() == {"detail": {"error": "invalid_request", "message": "No access token provided"}}
 
 
-async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
+async def test_token_not_bearer(fastapi_app, mock_openid_keys, mocker):
     """Test that when the token is not a Bearer token, it is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -230,7 +230,7 @@ async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker):
+async def test_token_extraction_raises(fastapi_app, mock_openid_keys, mocker):
     """Test that an exception during token extraction is handled."""
     mocker.patch.object(ZitadelAuth, "_extract_access_token", side_effect=ValueError("oops"))
     async with AsyncClient(
@@ -245,7 +245,7 @@ async def test_token_extraction_raises(fastapi_app, mock_openid_and_keys, mocker
         }
 
 
-async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
+async def test_header_invalid_alg(fastapi_app, mock_openid_keys):
     """Test that a token header with an invalid algorithm is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -258,7 +258,7 @@ async def test_header_invalid_alg(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
+async def test_header_invalid_typ(fastapi_app, mock_openid_keys):
     """Test that a token header with an invalid type is rejected."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -271,7 +271,7 @@ async def test_header_invalid_typ(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
+async def test_exception_handled(fastapi_app, mock_openid_keys, mocker):
     """Test that an exception during token verification is handled."""
     mocker.patch.object(TokenValidator, "verify", side_effect=ValueError("oops"))
     async with AsyncClient(
@@ -285,7 +285,7 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_then_ok, mocker):
+async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_key_rotation, mocker):
     """Test that the OpenID configuration is refreshed if the key ID is initially not found."""
     sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
 

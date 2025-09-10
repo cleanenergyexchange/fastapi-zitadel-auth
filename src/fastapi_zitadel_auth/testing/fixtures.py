@@ -54,7 +54,7 @@ async def reset_openid_cache():
 
 
 @pytest.fixture
-def mock_openid():
+def mock_openid_config():
     """
     Fixture to mock OpenID configuration endpoint
     
@@ -66,7 +66,7 @@ def mock_openid():
 
 
 @pytest.fixture
-def mock_openid_and_keys():
+def mock_openid_keys():
     """
     Fixture to mock both OpenID configuration and JWKS endpoints
     
@@ -80,7 +80,7 @@ def mock_openid_and_keys():
 
 
 @pytest.fixture
-def mock_openid_and_empty_keys():
+def mock_openid_empty_keys():
     """
     Fixture to mock OpenID with empty keys response
     
@@ -93,7 +93,7 @@ def mock_openid_and_empty_keys():
 
 
 @pytest.fixture
-def mock_openid_and_no_valid_keys():
+def mock_openid_invalid_keys():
     """
     Fixture to mock OpenID with invalid keys
     
@@ -106,7 +106,7 @@ def mock_openid_and_no_valid_keys():
 
 
 @pytest.fixture
-def mock_openid_empty_then_ok():
+def mock_openid_key_rotation():
     """
     Fixture to simulate key rotation
     
@@ -126,11 +126,3 @@ def mock_openid_empty_then_ok():
             httpx.Response(json=create_openid_keys(additional_key="rotated-key"), status_code=200),
         ]
         yield respx_mock
-
-
-# Descriptive aliases for better readability in new code
-mock_openid_config = mock_openid
-mock_openid_keys = mock_openid_and_keys
-mock_openid_empty_keys = mock_openid_and_empty_keys
-mock_openid_key_rotation = mock_openid_empty_then_ok
-mock_openid_invalid_keys = mock_openid_and_no_valid_keys
