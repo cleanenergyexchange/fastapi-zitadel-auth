@@ -4,7 +4,7 @@ Utility functions and constants for testing Zitadel authentication
 
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Any
 
 import jwt
 from cryptography.hazmat.backends import default_backend
@@ -14,10 +14,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi_zitadel_auth import ZitadelAuth
 
 # Test constants - can be overridden with environment variables or custom values
-ZITADEL_ISSUER = os.getenv("ZITADEL_HOST", "https://test.zitadel.cloud")
-ZITADEL_PROJECT_ID = os.getenv("ZITADEL_PROJECT_ID", "test-project-id")
-ZITADEL_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID", "test-client-id")
-ZITADEL_PRIMARY_DOMAIN = os.getenv("ZITADEL_PRIMARY_DOMAIN", "test.zitadel.cloud")
+ZITADEL_ISSUER = os.environ["ZITADEL_HOST"]
+ZITADEL_PROJECT_ID = os.environ["ZITADEL_PROJECT_ID"]
+ZITADEL_CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]
+ZITADEL_PRIMARY_DOMAIN = os.environ["ZITADEL_PRIMARY_DOMAIN"]
 
 
 def openid_config_url(issuer: str = ZITADEL_ISSUER) -> str:
@@ -30,7 +30,7 @@ def keys_url(issuer: str = ZITADEL_ISSUER) -> str:
     return f"{issuer}/oauth/v2/keys"
 
 
-def openid_configuration(issuer: str = ZITADEL_ISSUER) -> Dict[str, Any]:
+def openid_configuration(issuer: str = ZITADEL_ISSUER) -> dict[str, Any]:
     """Generate mock OpenID configuration"""
     return {
         "issuer": issuer,
@@ -141,7 +141,7 @@ def create_test_token(
     invalid_aud: bool = False,
     scopes: str = "openid profile",
     evil: bool = False,
-    role: Optional[str] = None,
+    role: str | None = None,
     typ: str = "JWT",
     alg: str = "RS256",
     subject: str = "user123",
@@ -149,7 +149,7 @@ def create_test_token(
     issuer: str = ZITADEL_ISSUER,
     project_id: str = ZITADEL_PROJECT_ID,
     primary_domain: str = ZITADEL_PRIMARY_DOMAIN,
-    additional_claims: Optional[Dict[str, Any]] = None
+    additional_claims: dict[str, Any] | None = None
 ) -> str:
     """
     Create a test JWT token for testing purposes
@@ -209,8 +209,8 @@ def create_test_token(
 def create_openid_keys(
     empty_keys: bool = False,
     no_valid_keys: bool = False,
-    additional_key: Optional[str] = None
-) -> Dict[str, Any]:
+    additional_key: str = None
+) -> dict[str, Any]:
     """
     Create mock JWKS response
     
@@ -291,22 +291,23 @@ class MockZitadelAuth(ZitadelAuth):
     def __init__(
         self,
         mock_user_id: str = "test-user",
-        mock_scopes: Optional[list] = None,
+        mock_scopes: list = None,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.mock_user_id = mock_user_id
         self.mock_scopes = mock_scopes or ["openid", "profile"]
     
-    async def __call__(self, request, security_scopes):
+    def __call__(self, request, security_scopes):
         """Return mock user data and set it in request.state, bypassing token validation"""
+        now = datetime.now()
         mock_claims_data = {
             "sub": self.mock_user_id,
             "aud": [self.project_id, self.client_id],
             "iss": self.issuer_url,
             "client_id": self.client_id,
-            "exp": 9999999999,  # Far future
-            "iat": 1000000000,  # Past
+            "exp": int(now.timestamp() + 3600),  # Future
+            "iat": int(now.timestamp() - 30),  # Past
             "scope": " ".join(self.mock_scopes),
         }
         

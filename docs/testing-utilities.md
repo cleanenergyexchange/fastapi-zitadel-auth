@@ -48,11 +48,11 @@ def test_with_mock_auth():
         project_id="test-project-id",
         allowed_scopes={"openid": "OpenID", "profile": "Profile"},
         mock_user_id="test-user-123",
-        mock_scopes=["openid", "profile", "admin"]
+        mock_scopes=["openid", "profile"]
     )
     
     # Override your app's dependency
-    app.dependency_overrides[your_zitadel_auth] = lambda: mock_auth
+    app.dependency_overrides[your_zitadel_auth] = mock_auth
 ```
 
 ## Available Utilities

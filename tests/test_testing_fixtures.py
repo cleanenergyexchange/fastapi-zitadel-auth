@@ -3,6 +3,7 @@ Tests for the testing fixtures and utilities
 """
 
 import pytest
+from datetime import datetime
 from fastapi_zitadel_auth.testing.fixtures import mock_zitadel_auth, reset_openid_cache, mock_openid_config
 from fastapi_zitadel_auth.testing.utils import MockZitadelAuth, create_test_token, openid_config_url, openid_configuration
 from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
@@ -53,13 +54,14 @@ async def test_mock_zitadel_auth_call():
     assert mock_auth.project_id == ZITADEL_PROJECT_ID
     
     # Test that we can create mock user data directly
+    now = datetime.now()
     mock_claims_data = {
         "sub": mock_auth.mock_user_id,
         "aud": [mock_auth.project_id, mock_auth.client_id],
         "iss": mock_auth.issuer_url,
         "client_id": mock_auth.client_id,
-        "exp": 9999999999,  # Far future
-        "iat": 1000000000,  # Past
+        "exp": int(now.timestamp() + 3600),  # Future
+        "iat": int(now.timestamp() - 30),  # Past
     }
     
     mock_claims = DefaultZitadelClaims(**mock_claims_data)
@@ -99,7 +101,7 @@ def test_mock_openid_fixture(mock_openid_config):
 async def test_mock_zitadel_auth_call_with_request_state():
     """Test the MockZitadelAuth __call__ method with request state handling"""
     from unittest.mock import Mock
-    
+
     mock_auth = MockZitadelAuth(
         issuer_url=ZITADEL_ISSUER,
         app_client_id=ZITADEL_CLIENT_ID,
@@ -158,5 +160,3 @@ async def test_mock_zitadel_auth_call_without_request_state():
     assert user.claims.iss == ZITADEL_ISSUER
     assert user.claims.client_id == ZITADEL_CLIENT_ID
     assert user.access_token == "mock-access-token"
-    
-    # Verify no error occurred when request has no state attribute

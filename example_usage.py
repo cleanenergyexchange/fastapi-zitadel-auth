@@ -63,9 +63,9 @@ def test_mock_auth():
         issuer_url=ZITADEL_ISSUER,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
-        allowed_scopes={"openid": "OpenID", "profile": "Profile", "admin": "Admin"},
+        allowed_scopes={"openid": "OpenID", "profile": "Profile", "urn:zitadel:iam:user:metadata": "User Metadata"},
         mock_user_id="test-user-456",
-        mock_scopes=["openid", "profile", "admin"]
+        mock_scopes=["openid", "profile", "urn:zitadel:iam:user:metadata"]
     )
     
     print(f"✓ Created MockZitadelAuth with user: {mock_auth.mock_user_id}")
