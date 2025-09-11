@@ -2,22 +2,35 @@
 Utility functions and constants for testing Zitadel authentication
 """
 
+import logging
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from typing import (
+    TypeVar,
+    Generic,
+    Any,  # noqa
+)
 
 import jwt
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-
+from starlette.requests import Request
+from fastapi.security import SecurityScopes
+from fastapi_zitadel_auth.exceptions import InvalidRequestException, UnauthorizedException, ForbiddenException
 from fastapi_zitadel_auth import ZitadelAuth
+from fastapi_zitadel_auth.auth import BaseZitadelUser, JwtClaims
+
+ClaimsT = TypeVar("ClaimsT", bound="JwtClaims")
+UserT = TypeVar("UserT", bound="BaseZitadelUser[Any]")
+
+log = logging.getLogger("fastapi_zitadel_auth")
 
 # Test constants - can be overridden with environment variables or custom values
-ZITADEL_ISSUER = os.environ["ZITADEL_HOST"]
-ZITADEL_PROJECT_ID = os.environ["ZITADEL_PROJECT_ID"]
-ZITADEL_CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]
-ZITADEL_PRIMARY_DOMAIN = os.environ["ZITADEL_PRIMARY_DOMAIN"]
+ZITADEL_ISSUER = os.environ.get("ZITADEL_HOST")
+ZITADEL_PROJECT_ID = os.environ.get("ZITADEL_PROJECT_ID")
+ZITADEL_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID")
+ZITADEL_PRIMARY_DOMAIN = os.environ.get("ZITADEL_PRIMARY_DOMAIN")
 
 
 def openid_config_url(issuer: str = ZITADEL_ISSUER) -> str:
@@ -294,33 +307,44 @@ class MockZitadelAuth(ZitadelAuth):
         mock_scopes: list = None,
         **kwargs
     ):
+        print("MockZitadelAuth.__init__ called!")
         super().__init__(**kwargs)
         self.mock_user_id = mock_user_id
         self.mock_scopes = mock_scopes or ["openid", "profile"]
     
-    def __call__(self, request, security_scopes):
-        """Return mock user data and set it in request.state, bypassing token validation"""
-        now = datetime.now()
-        mock_claims_data = {
-            "sub": self.mock_user_id,
-            "aud": [self.project_id, self.client_id],
-            "iss": self.issuer_url,
-            "client_id": self.client_id,
-            "exp": int(now.timestamp() + 3600),  # Future
-            "iat": int(now.timestamp() - 30),  # Past
-            "scope": " ".join(self.mock_scopes),
-        }
-        
-        # Create mock user object using the configured user model
-        mock_claims = self.claims_model(**mock_claims_data)
-        mock_user = self.user_model(claims=mock_claims, access_token="mock-access-token")
-        
-        # Set user in request state like the real ZitadelAuth does
-        if hasattr(request, 'state'):
-            request.state.user = mock_user
-        
-        return mock_user
+    async def __call__(self, request: Request, security_scopes: SecurityScopes) -> UserT | None:
+        """
+        Extend the SecurityBase.__call__ method to validate the Zitadel OAuth2 token.
+        see also FastAPI -> "Advanced Dependency".
+        """
+        print("MockZitadelAuth.__call__ is being called!")
+        try:
+            access_token = await self._extract_access_token(request)
+            if access_token is None:
+                raise InvalidRequestException("No access token provided")
 
+            unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
+            self.token_validator.validate_header(unverified_header)
+            self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
+
+            print("Unverified claims:", unverified_claims)  # Debug line
+
+            user: UserT = self.user_model(  # type: ignore
+                # here we check the unverified claims instead of verified ones!
+                claims=self.claims_model.model_validate(unverified_claims), 
+                access_token=access_token,
+            )
+            # Add the user to the request state
+            request.state.user = user
+            return user
+        
+        except (UnauthorizedException, InvalidRequestException, ForbiddenException):
+            raise
+
+        except Exception as error:
+            # Failsafe in case of error in OAuth2AuthorizationCodeBearer.__call__
+            log.warning(f"Unable to extract token from request. Error: {error}")
+            raise InvalidRequestException("Unable to extract token from request") from error
 
 # Generate test RSA keys
 valid_key = rsa.generate_private_key(
