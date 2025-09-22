@@ -12,6 +12,9 @@ pip install "fastapi-zitadel-auth[testing]"
 
 ## Quick Start
 
+You can also have a look at [demo_project/tests.py]([../demo_project/tests.py) to see
+a simplified example of testing authorization to your endpoints.
+
 ### Basic Usage
 
 ```python
@@ -226,5 +229,3 @@ def test_insufficient_scope(client, mock_openid_keys):
     
     assert response.status_code == 403
 ```
-
-This comprehensive testing setup allows you to test all aspects of your Zitadel-authenticated FastAPI application without requiring a real Zitadel instance.

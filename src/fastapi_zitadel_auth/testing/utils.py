@@ -27,23 +27,23 @@ UserT = TypeVar("UserT", bound="BaseZitadelUser[Any]")
 log = logging.getLogger("fastapi_zitadel_auth")
 
 # Test constants - can be overridden with environment variables or custom values
-ZITADEL_ISSUER = os.environ.get("ZITADEL_HOST")
+ZITADEL_HOST = os.environ.get("ZITADEL_HOST")
 ZITADEL_PROJECT_ID = os.environ.get("ZITADEL_PROJECT_ID")
 ZITADEL_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID")
 ZITADEL_PRIMARY_DOMAIN = os.environ.get("ZITADEL_PRIMARY_DOMAIN")
 
 
-def openid_config_url(issuer: str = ZITADEL_ISSUER) -> str:
+def openid_config_url(issuer: str = ZITADEL_HOST) -> str:
     """Generate OpenID configuration URL"""
     return f"{issuer}/.well-known/openid-configuration"
 
 
-def keys_url(issuer: str = ZITADEL_ISSUER) -> str:
+def keys_url(issuer: str = ZITADEL_HOST) -> str:
     """Generate JWKS URL"""
     return f"{issuer}/oauth/v2/keys"
 
 
-def openid_configuration(issuer: str = ZITADEL_ISSUER) -> dict[str, Any]:
+def openid_configuration(issuer: str = ZITADEL_HOST) -> dict[str, Any]:
     """Generate mock OpenID configuration"""
     return {
         "issuer": issuer,
@@ -159,7 +159,7 @@ def create_test_token(
     alg: str = "RS256",
     subject: str = "user123",
     client_id: str = ZITADEL_CLIENT_ID,
-    issuer: str = ZITADEL_ISSUER,
+    issuer: str = ZITADEL_HOST,
     project_id: str = ZITADEL_PROJECT_ID,
     primary_domain: str = ZITADEL_PRIMARY_DOMAIN,
     additional_claims: dict[str, Any] | None = None

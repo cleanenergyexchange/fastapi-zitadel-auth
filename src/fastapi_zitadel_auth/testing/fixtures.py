@@ -19,7 +19,7 @@ from .utils import (
     keys_url,
     MockZitadelAuth,
     ZITADEL_CLIENT_ID,
-    ZITADEL_ISSUER,
+    ZITADEL_HOST,
     ZITADEL_PROJECT_ID,
 )
 
@@ -33,7 +33,7 @@ def mock_zitadel_auth() -> MockZitadelAuth:
     Useful for testing application logic without network calls.
     """
     return MockZitadelAuth(
-        issuer_url=ZITADEL_ISSUER,
+        issuer_url=ZITADEL_HOST,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"openid": "OpenID scope", "profile": "Profile scope"},
@@ -50,6 +50,7 @@ async def reset_openid_cache():
     """
     # Note: This assumes ZitadelAuth has a cache that can be reset
     # Users may need to adjust this based on their actual implementation
+    # TODO: openid_config.reset_cache()
     yield
 
 

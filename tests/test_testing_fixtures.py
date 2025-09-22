@@ -6,13 +6,13 @@ import pytest
 from datetime import datetime
 from fastapi_zitadel_auth.testing.fixtures import mock_zitadel_auth, reset_openid_cache, mock_openid_config
 from fastapi_zitadel_auth.testing.utils import MockZitadelAuth, create_test_token, openid_config_url, openid_configuration
-from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
+from fastapi_zitadel_auth.testing import ZITADEL_HOST, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
 
 def test_mock_zitadel_auth_fixture(mock_zitadel_auth):
     """Test that the mock_zitadel_auth fixture works correctly"""
     assert isinstance(mock_zitadel_auth, MockZitadelAuth)
-    assert mock_zitadel_auth.issuer_url == ZITADEL_ISSUER
+    assert mock_zitadel_auth.issuer_url == ZITADEL_HOST
     assert mock_zitadel_auth.client_id == ZITADEL_CLIENT_ID
     assert mock_zitadel_auth.project_id == ZITADEL_PROJECT_ID
     assert "openid" in mock_zitadel_auth.mock_scopes
@@ -38,7 +38,7 @@ async def test_mock_zitadel_auth_call():
     from fastapi_zitadel_auth.user import DefaultZitadelClaims
     
     mock_auth = MockZitadelAuth(
-        issuer_url=ZITADEL_ISSUER,
+        issuer_url=ZITADEL_HOST,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"openid": "OpenID access", "profile": "Profile access", "admin": "Admin access"},
@@ -49,7 +49,7 @@ async def test_mock_zitadel_auth_call():
     # Verify the mock auth properties
     assert mock_auth.mock_user_id == "test-user-123"
     assert mock_auth.mock_scopes == ["openid", "profile", "admin"]
-    assert mock_auth.issuer_url == ZITADEL_ISSUER
+    assert mock_auth.issuer_url == ZITADEL_HOST
     assert mock_auth.client_id == ZITADEL_CLIENT_ID
     assert mock_auth.project_id == ZITADEL_PROJECT_ID
     
@@ -103,7 +103,7 @@ async def test_mock_zitadel_auth_call_with_request_state():
     from unittest.mock import Mock
 
     mock_auth = MockZitadelAuth(
-        issuer_url=ZITADEL_ISSUER,
+        issuer_url=ZITADEL_HOST,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"openid": "OpenID access", "profile": "Profile access"},
@@ -124,7 +124,7 @@ async def test_mock_zitadel_auth_call_with_request_state():
     
     # Verify the user was created correctly
     assert user.claims.sub == "test-user-456"
-    assert user.claims.iss == ZITADEL_ISSUER
+    assert user.claims.iss == ZITADEL_HOST
     assert user.claims.client_id == ZITADEL_CLIENT_ID
     assert user.access_token == "mock-access-token"
     
@@ -138,7 +138,7 @@ async def test_mock_zitadel_auth_call_without_request_state():
     from unittest.mock import Mock
     
     mock_auth = MockZitadelAuth(
-        issuer_url=ZITADEL_ISSUER,
+        issuer_url=ZITADEL_HOST,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"openid": "OpenID access"},
@@ -157,6 +157,6 @@ async def test_mock_zitadel_auth_call_without_request_state():
     
     # Verify the user was created correctly
     assert user.claims.sub == "test-user-789"
-    assert user.claims.iss == ZITADEL_ISSUER
+    assert user.claims.iss == ZITADEL_HOST
     assert user.claims.client_id == ZITADEL_CLIENT_ID
     assert user.access_token == "mock-access-token"

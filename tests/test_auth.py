@@ -14,7 +14,7 @@ from fastapi_zitadel_auth.token import TokenValidator
 from fastapi_zitadel_auth.testing import (
     create_test_token,
     ZITADEL_PRIMARY_DOMAIN,
-    ZITADEL_ISSUER,
+    ZITADEL_HOST,
     ZITADEL_PROJECT_ID,
     ZITADEL_CLIENT_ID,
 )
@@ -37,7 +37,7 @@ async def test_admin_user(fastapi_app, mock_openid_keys):
         assert response.status_code == 200, response.text
         # see create_test_token for the claims
         assert response.json() == {
-            "message": "Hello world!",
+            "message": "Hello admin!",
             "user": {
                 "access_token": access_token,
                 "claims": {
@@ -48,7 +48,7 @@ async def test_admin_user(fastapi_app, mock_openid_keys):
                     "client_id": ZITADEL_CLIENT_ID,
                     "exp": expires,
                     "iat": issued_at,
-                    "iss": ZITADEL_ISSUER,
+                    "iss": ZITADEL_HOST,
                     "jti": "unique-token-id",
                     "nbf": issued_at,
                     "project_roles": {

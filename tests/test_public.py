@@ -9,7 +9,7 @@ def test_public_endpoint(public_client):
     """Test that the public endpoint works"""
     response = public_client.get("/api/public")
     assert response.status_code == 200, response.text
-    assert response.json() == {"message": "Hello world!"}
+    assert response.json() == {"message": "Hello everyone!"}
 
 
 @pytest.mark.parametrize(

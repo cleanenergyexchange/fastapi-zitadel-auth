@@ -19,7 +19,7 @@ from fastapi_zitadel_auth.testing import (
     openid_configuration,
     keys_url,
     ZITADEL_CLIENT_ID,
-    ZITADEL_ISSUER,
+    ZITADEL_HOST,
     ZITADEL_PROJECT_ID,
 )
 from fastapi_zitadel_auth.testing.fixtures import (
@@ -35,7 +35,7 @@ from fastapi_zitadel_auth.testing.fixtures import (
 def fastapi_app():
     """FastAPI app fixture"""
     zitadel_auth_overrides = ZitadelAuth(
-        issuer_url=ZITADEL_ISSUER,
+        issuer_url=ZITADEL_HOST,
         app_client_id=ZITADEL_CLIENT_ID,
         project_id=ZITADEL_PROJECT_ID,
         allowed_scopes={"scope1": "Some scope"},

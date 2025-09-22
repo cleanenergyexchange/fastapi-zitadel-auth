@@ -5,7 +5,7 @@ Test the OpenAPI schema.
 import openapi_spec_validator
 
 from fastapi_zitadel_auth import __version__
-from fastapi_zitadel_auth.testing import ZITADEL_ISSUER
+from fastapi_zitadel_auth.testing import ZITADEL_HOST
 
 openapi_schema = {
     "openapi": "3.1.0",
@@ -38,6 +38,20 @@ openapi_schema = {
                 "security": [{"ZitadelAuthorizationCodeBearer": []}],
             }
         },
+		"/api/protected": {
+			"get": {
+				"summary": "Protected endpoint, requires valid token",
+				"description": "Protected endpoint",
+				"operationId": "protected_for_admin_api_protected_get",
+				"responses": {
+				"200": {
+					"description": "Successful Response",
+					"content": {"application/json": {"schema": {}}}
+					}
+				},
+			"security": [{"ZitadelAuthorizationCodeBearer": [] }],
+			}
+		},
         "/api/protected/scope": {
             "get": {
                 "summary": "Protected endpoint, requires a specific scope",
@@ -67,8 +81,8 @@ openapi_schema = {
                             "urn:zitadel:iam:org:project:id:zitadel:aud": "Audience",
                             "urn:zitadel:iam:org:projects:roles": "Projects roles",
                         },
-                        "authorizationUrl": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
-                        "tokenUrl": f"{ZITADEL_ISSUER}/oauth/v2/token",
+                        "authorizationUrl": f"{ZITADEL_HOST}/oauth/v2/authorize",
+                        "tokenUrl": f"{ZITADEL_HOST}/oauth/v2/token",
                     }
                 },
             }
@@ -78,15 +92,15 @@ openapi_schema = {
 
 
 def test_openapi_schema(public_client):
-    """Test the OpenAPI schema matches to the expected schema"""
-    response = public_client.get("/openapi.json")
-    assert response.status_code == 200, response.text
-    print(response.json())
-    assert response.json() == openapi_schema
+	"""Test the OpenAPI schema matches to the expected schema"""
+	response = public_client.get("/openapi.json")
+	assert response.status_code == 200, response.text
+	print(response.json())
+	assert response.json() == openapi_schema
 
 
 def test_validate_openapi_spec(public_client):
-    """Validate the OpenAPI spec"""
-    response = public_client.get("/openapi.json")
-    assert response.status_code == 200, response.text
-    openapi_spec_validator.validate(response.json())
+	"""Validate the OpenAPI spec"""
+	response = public_client.get("/openapi.json")
+	assert response.status_code == 200, response.text
+	openapi_spec_validator.validate(response.json())

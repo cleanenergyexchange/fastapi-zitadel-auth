@@ -26,7 +26,7 @@ __all__ = [
     "keys_url",
     "MockZitadelAuth",
     "ZITADEL_CLIENT_ID",
-    "ZITADEL_ISSUER", 
+    "ZITADEL_HOST", 
     "ZITADEL_PROJECT_ID",
     "ZITADEL_PRIMARY_DOMAIN",
     "valid_key",

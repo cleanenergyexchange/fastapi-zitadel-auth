@@ -12,7 +12,7 @@ from fastapi_zitadel_auth.user import (
     DefaultZitadelClaims,
     DefaultZitadelUser,
 )
-from fastapi_zitadel_auth.testing import ZITADEL_ISSUER, ZITADEL_PRIMARY_DOMAIN, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
+from fastapi_zitadel_auth.testing import ZITADEL_HOST, ZITADEL_PRIMARY_DOMAIN, ZITADEL_CLIENT_ID, ZITADEL_PROJECT_ID
 
 role_key = "role1"
 role_id = "295621089671959405"
@@ -28,7 +28,7 @@ def valid_claims_data() -> dict:
         "client_id": ZITADEL_CLIENT_ID,
         "exp": now + 3600,
         "iat": now,
-        "iss": ZITADEL_ISSUER,
+        "iss": ZITADEL_HOST,
         "sub": sub,
         "nbf": now,
         "jti": "unique-token-id",

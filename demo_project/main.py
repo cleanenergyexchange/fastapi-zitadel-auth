@@ -74,7 +74,18 @@ app.add_middleware(
 @app.get("/api/public", summary="Public endpoint")
 def public():
     """Public endpoint"""
-    return {"message": "Hello world!"}
+    return {"message": "Hello everyone!"}
+
+
+@app.get(
+    "/api/protected",
+    summary="Protected endpoint, requires valid token",
+    dependencies=[Security(zitadel_auth)],
+)
+def protected_for_admin(request: Request):
+    """Protected endpoint"""
+    user = request.state.user
+    return {"message": "Hello authenticated user!", "user": user}
 
 
 @app.get(
@@ -85,7 +96,7 @@ def public():
 def protected_for_admin(request: Request):
     """Protected endpoint"""
     user = request.state.user
-    return {"message": "Hello world!", "user": user}
+    return {"message": "Hello admin!", "user": user}
 
 
 @app.get(
@@ -96,7 +107,7 @@ def protected_for_admin(request: Request):
 def protected_by_scope(request: Request):
     """Protected endpoint, requires a specific scope"""
     user = request.state.user
-    return {"message": "Hello world!", "user": user}
+    return {"message": "Hello user with scope1!", "user": user}
 
 
 if __name__ == "__main__":

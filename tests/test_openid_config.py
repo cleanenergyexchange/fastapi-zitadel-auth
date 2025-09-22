@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
-from fastapi_zitadel_auth.testing import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url, openid_configuration
+from fastapi_zitadel_auth.testing import valid_key, ZITADEL_HOST, openid_config_url, keys_url, openid_configuration
 
 
 @pytest.fixture
