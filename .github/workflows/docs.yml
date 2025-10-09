@@ -16,7 +16,7 @@ jobs:
       id-token: write
     steps:
     - name: 📥 checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
     - name: 🔧 setup uv
@@ -26,7 +26,7 @@ jobs:
     - name: 📙 mkdocs build
       run: uv run mkdocs build
     - name: 📦 Upload artifacts
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: site
 

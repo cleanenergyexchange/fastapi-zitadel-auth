@@ -6,7 +6,6 @@ from typing import Iterator
 
 import httpx
 import pytest
-import respx
 from blockbuster import blockbuster_ctx, BlockBuster
 from starlette.testclient import TestClient
 
@@ -51,7 +50,6 @@ async def reset_openid_config():
     yield
 
 
-@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid(respx_mock):
     """Fixture to mock OpenID configuration"""
@@ -59,7 +57,6 @@ def mock_openid(respx_mock):
     yield
 
 
-@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and keys"""
@@ -67,7 +64,6 @@ def mock_openid_and_keys(respx_mock, mock_openid):
     yield
 
 
-@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_empty_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and empty keys"""
@@ -75,7 +71,6 @@ def mock_openid_and_empty_keys(respx_mock, mock_openid):
     yield
 
 
-@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_empty_then_ok(respx_mock, mock_openid):
     keys_route = respx_mock.get(keys_url())
@@ -93,7 +88,6 @@ def mock_openid_empty_then_ok(respx_mock, mock_openid):
     assert openid_route.call_count == 2
 
 
-@respx.mock(assert_all_called=True)
 @pytest.fixture
 def mock_openid_and_no_valid_keys(respx_mock, mock_openid):
     """Fixture to mock OpenID configuration and keys with no valid keys"""
