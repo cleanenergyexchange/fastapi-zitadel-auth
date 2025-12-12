@@ -29,6 +29,8 @@ zitadel_auth = ZitadelAuth(
         "urn:zitadel:iam:org:projects:roles": "Projects roles",
     },
     token_leeway=3,
+    scheme_name="ZitadelAuth",
+    description="OAuth2 Authorization Code Flow with PKCE for Zitadel authentication",
 )
 
 

@@ -89,6 +89,21 @@ def protected_by_scope(request: Request):
 
 ```
 
+## Customizing OpenAPI documentation
+
+You can optionally customize how the authentication scheme appears in Swagger UI:
+
+```python
+zitadel_auth = ZitadelAuth(
+    ...,
+    scheme_name="ZitadelAuth",  # Optional (default: "ZitadelAuthorizationCodeBearer")
+    description="OAuth2 authentication via Zitadel",  # Optional
+)
+```
+
+!!! info "Optional parameters"
+
+    Both `scheme_name` and `description` are optional and have sensible defaults. Only customize them if you want to change how the authentication scheme appears in your API documentation.
 
 !!! note "CORS Middleware"
 

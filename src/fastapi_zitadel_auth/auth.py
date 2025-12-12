@@ -53,6 +53,8 @@ class ZitadelAuth(SecurityBase):
         cache_ttl_seconds: int = 600,
         claims_model: Type[ClaimsT] = DefaultZitadelClaims,  # type: ignore
         user_model: Type[UserT] = DefaultZitadelUser,  # type: ignore
+        scheme_name: str = "ZitadelAuthorizationCodeBearer",
+        description: str = "Zitadel OAuth2 authentication using bearer token",
     ) -> None:
         """
         Initialize the ZitadelAuth object
@@ -84,6 +86,14 @@ class ZitadelAuth(SecurityBase):
 
         :param user_model:  Type[UserT]
             The user model to use, e.g. DefaultZitadelUser. See user.py
+
+        :param scheme_name: str
+            The name of the security scheme for OpenAPI documentation.
+            Default: "ZitadelAuthorizationCodeBearer"
+
+        :param description: str
+            The description of the security scheme for OpenAPI documentation.
+            Default: "Zitadel OAuth2 authentication using bearer token"
         """
 
         self.client_id = app_client_id
@@ -96,6 +106,12 @@ class ZitadelAuth(SecurityBase):
 
         if not issubclass(user_model, BaseZitadelUser):
             raise ValueError("user_model must be a subclass of BaseZitadelUser")
+
+        if not isinstance(scheme_name, str) or not scheme_name.strip():
+            raise ValueError("scheme_name must be a non-empty string")
+
+        if not isinstance(description, str) or not description.strip():
+            raise ValueError("description must be a non-empty string")
 
         self.claims_model = claims_model
         self.user_model = user_model
@@ -113,8 +129,8 @@ class ZitadelAuth(SecurityBase):
             authorizationUrl=self.openid_config.authorization_url,
             tokenUrl=self.openid_config.token_url,
             scopes=allowed_scopes,
-            scheme_name="ZitadelAuthorizationCodeBearer",
-            description="Zitadel OAuth2 authentication using bearer token",
+            scheme_name=scheme_name,
+            description=description,
         )
 
         self.token_validator = TokenValidator()
