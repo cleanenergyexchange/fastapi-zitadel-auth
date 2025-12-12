@@ -54,7 +54,7 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     }
                 },
-                "security": [{expected_scheme_name: []}],
+                "security": [{expected_scheme_name: ["scope1"]}],
             }
         },
     },
