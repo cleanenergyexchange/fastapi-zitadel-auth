@@ -121,3 +121,59 @@ class TestZitadelAuth:
         assert user.access_token == "test_token"
         assert user.username == "testuser"
         assert user.claims.custom_field == "custom_value"
+
+    def test_empty_scheme_name(self):
+        """Test initialization with empty scheme_name raises ValueError"""
+        with pytest.raises(ValueError, match="scheme_name must be a non-empty string"):
+            ZitadelAuth(
+                issuer_url=ZITADEL_ISSUER,
+                project_id="project_id",
+                app_client_id="client_id",
+                allowed_scopes={"openid": "OpenID Connect"},
+                scheme_name="",
+            )
+
+    def test_empty_description(self):
+        """Test initialization with empty description raises ValueError"""
+        with pytest.raises(ValueError, match="description must be a non-empty string"):
+            ZitadelAuth(
+                issuer_url=ZITADEL_ISSUER,
+                project_id="project_id",
+                app_client_id="client_id",
+                allowed_scopes={"openid": "OpenID Connect"},
+                description="",
+            )
+
+    def test_whitespace_scheme_name(self):
+        """Test initialization with whitespace scheme_name raises ValueError"""
+        with pytest.raises(ValueError, match="scheme_name must be a non-empty string"):
+            ZitadelAuth(
+                issuer_url=ZITADEL_ISSUER,
+                project_id="project_id",
+                app_client_id="client_id",
+                allowed_scopes={"openid": "OpenID Connect"},
+                scheme_name="   ",
+            )
+
+    def test_whitespace_description(self):
+        """Test initialization with whitespace description raises ValueError"""
+        with pytest.raises(ValueError, match="description must be a non-empty string"):
+            ZitadelAuth(
+                issuer_url=ZITADEL_ISSUER,
+                project_id="project_id",
+                app_client_id="client_id",
+                allowed_scopes={"openid": "OpenID Connect"},
+                description="   ",
+            )
+
+    def test_custom_scheme_name_and_description(self):
+        """Test initialization with custom scheme_name and description"""
+        custom_auth = ZitadelAuth(
+            issuer_url=ZITADEL_ISSUER,
+            project_id="project_id",
+            app_client_id="client_id",
+            allowed_scopes={"openid": "OpenID Connect"},
+            scheme_name="CustomAuthScheme",
+            description="Custom authentication description",
+        )
+        assert custom_auth.scheme_name == "CustomAuthScheme"

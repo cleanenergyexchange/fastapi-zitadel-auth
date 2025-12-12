@@ -5,7 +5,12 @@ Test the OpenAPI schema.
 import openapi_spec_validator
 
 from fastapi_zitadel_auth import __version__
+
+from demo_project.main import app
 from tests.utils import ZITADEL_ISSUER
+
+expected_scheme_name = "ZitadelAuth"
+expected_description = "OAuth2 Authorization Code Flow with PKCE for Zitadel authentication"
 
 openapi_schema = {
     "openapi": "3.1.0",
@@ -35,7 +40,7 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     }
                 },
-                "security": [{"ZitadelAuthorizationCodeBearer": []}],
+                "security": [{expected_scheme_name: []}],
             }
         },
         "/api/protected/scope": {
@@ -49,15 +54,15 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     }
                 },
-                "security": [{"ZitadelAuthorizationCodeBearer": []}],
+                "security": [{expected_scheme_name: []}],
             }
         },
     },
     "components": {
         "securitySchemes": {
-            "ZitadelAuthorizationCodeBearer": {
+            expected_scheme_name: {
                 "type": "oauth2",
-                "description": "Zitadel OAuth2 authentication using bearer token",
+                "description": expected_description,
                 "flows": {
                     "authorizationCode": {
                         "scopes": {
@@ -90,3 +95,14 @@ def test_validate_openapi_spec(public_client):
     response = public_client.get("/openapi.json")
     assert response.status_code == 200, response.text
     openapi_spec_validator.validate(response.json())
+
+
+def test_custom_scheme_name_and_description():
+    """Test that custom scheme_name and description from demo app appear in OpenAPI schema"""
+
+    openapi_schema_from_app = app.openapi()
+    assert expected_scheme_name in openapi_schema_from_app["components"]["securitySchemes"]
+    assert (
+        openapi_schema_from_app["components"]["securitySchemes"][expected_scheme_name]["description"]
+        == expected_description
+    )
