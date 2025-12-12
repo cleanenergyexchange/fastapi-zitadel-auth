@@ -129,7 +129,7 @@ class ZitadelAuth(SecurityBase):
         try:
             access_token = await self._extract_access_token(request)
             if access_token is None:
-                raise InvalidRequestException("No access token provided")
+                raise UnauthorizedException("No access token provided")
 
             unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
             self.token_validator.validate_header(unverified_header)

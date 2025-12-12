@@ -208,11 +208,25 @@ async def test_none_token(fastapi_app, mock_openid_and_keys, mocker):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"Authorization": "Bearer " + create_test_token(role="admin")},
     ) as ac:
         response = await ac.get("/api/protected/admin")
-        assert response.status_code == 400
-        assert response.json() == {"detail": {"error": "invalid_request", "message": "No access token provided"}}
+        assert response.status_code == 401
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "No access token provided"}}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_missing_authorization_header(fastapi_app, mock_openid_and_keys):
+    """Test that when Authorization header is completely missing, request is rejected with 401."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+
+        # FastAPI's OAuth2AuthorizationCodeBearer handles missing headers
+        assert response.status_code == 401
+        assert response.json() == {"detail": "Not authenticated"}
+        assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 async def test_token_not_bearer(fastapi_app, mock_openid_and_keys, mocker):
