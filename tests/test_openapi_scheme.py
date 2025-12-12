@@ -3,7 +3,9 @@ Test the OpenAPI schema.
 """
 
 import openapi_spec_validator
+from packaging import version
 
+import fastapi
 from fastapi_zitadel_auth import __version__
 
 from demo_project.main import app
@@ -11,6 +13,12 @@ from tests.utils import ZITADEL_ISSUER
 
 expected_scheme_name = "ZitadelAuth"
 expected_description = "OAuth2 Authorization Code Flow with PKCE for Zitadel authentication"
+
+# FastAPI 0.123.8+ changed how scopes are represented in OpenAPI schema
+# https://github.com/fastapi/fastapi/pull/14455
+# https://github.com/fastapi/fastapi/releases/tag/0.123.8
+FASTAPI_VERSION = version.parse(fastapi.__version__)
+SCOPES_IN_SECURITY = ["scope1"] if FASTAPI_VERSION >= version.parse("0.123.8") else []
 
 openapi_schema = {
     "openapi": "3.1.0",
@@ -54,7 +62,7 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     }
                 },
-                "security": [{expected_scheme_name: []}],
+                "security": [{expected_scheme_name: SCOPES_IN_SECURITY}],
             }
         },
     },
