@@ -510,7 +510,7 @@ wheels = [
 
 [[package]]
 name = "fastapi-zitadel-auth"
-version = "0.2.5"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
