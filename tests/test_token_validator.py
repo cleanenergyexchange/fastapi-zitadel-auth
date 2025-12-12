@@ -262,7 +262,6 @@ class TestTokenValidator:
                 issuer=ZITADEL_ISSUER,
             )
 
-
     def test_verify_not_yet_valid(self, token_validator, rsa_keys):
         """Raise Exception when verifying a token that is not yet valid"""
         private_key, public_key = rsa_keys
