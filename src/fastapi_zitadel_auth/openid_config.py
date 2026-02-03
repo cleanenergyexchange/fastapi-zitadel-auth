@@ -1,9 +1,9 @@
-import asyncio
-from asyncio import Lock
+from asyncio import Lock, sleep
 from datetime import datetime, timedelta
 import logging
 from typing import Any
 import httpx
+from jwt import PyJWK
 from jwt import PyJWK
 from pydantic import BaseModel, ConfigDict, PositiveInt
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
@@ -83,7 +83,7 @@ class OpenIdConfig(BaseModel):
     async def _sleep() -> None:
         """Wait for a short period to allow other tasks to run."""
         log.debug("Waiting for other tasks to finish...")
-        await asyncio.sleep(1)
+        await sleep(1)
 
     def _needs_refresh(self) -> bool:
         """Check if the cached keys should be refreshed based on cache state or time elapsed."""
