@@ -4,7 +4,6 @@ import logging
 from typing import Any
 import httpx
 from jwt import PyJWK
-from jwt import PyJWK
 from pydantic import BaseModel, ConfigDict, PositiveInt
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
