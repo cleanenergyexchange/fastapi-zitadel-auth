@@ -1,13 +1,11 @@
 exclude: README.md
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.8
+    rev: v0.15.0
     hooks:
-      - id: ruff
-        entry: uv run ruff check src/
+      - id: ruff-check
         files: \.py$
       - id: ruff-format
-        entry: uv run ruff format src/
         files: \.py$
 
   - repo: https://github.com/econchick/interrogate
