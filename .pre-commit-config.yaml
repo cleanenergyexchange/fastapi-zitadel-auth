@@ -3,10 +3,10 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.0
     hooks:
+      # Run the linter.
       - id: ruff-check
-        files: \.py$
+      # Run the formatter.
       - id: ruff-format
-        files: \.py$
 
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0
