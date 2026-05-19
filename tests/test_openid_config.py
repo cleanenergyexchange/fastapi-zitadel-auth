@@ -2,12 +2,43 @@
 Tests for OpenIdConfig class
 """
 
+import httpx
+import jwt
 import pytest
 from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
+from fastapi_zitadel_auth.exceptions import UnauthorizedException
 from fastapi_zitadel_auth.openid_config import OpenIdConfig
 from tests.utils import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url
+
+
+def _config_with_seeded_key(kid: str = "k1") -> OpenIdConfig:
+    """Build an OpenIdConfig pre-populated with one valid signing key."""
+    return OpenIdConfig(
+        issuer_url=ZITADEL_ISSUER,
+        config_url=openid_config_url(),
+        authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+        token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
+        jwks_uri=keys_url(),
+        signing_keys={kid: valid_key.public_key()},
+        last_refresh_timestamp=datetime.now(),
+    )
+
+
+def _jwks_with(kid: str) -> dict:
+    """Build a JWKS response containing exactly one RS256 sig key with the given kid."""
+    return {
+        "keys": [
+            {
+                "use": "sig",
+                "kid": kid,
+                "kty": "RSA",
+                "alg": "RS256",
+                **jwt.algorithms.RSAAlgorithm.to_jwk(valid_key.public_key(), as_dict=True),
+            }
+        ]
+    }
 
 
 @pytest.fixture
@@ -175,3 +206,186 @@ class TestOpenIdConfig:
             signing_keys={"kid": signing_key} if signing_key else {},
         )
         assert config._needs_refresh() == expected
+
+
+@pytest.mark.asyncio
+class TestKidMissRefresh:
+    """Regression suite for GH #149: unknown-kid path must not DoS the worker pool."""
+
+    async def test_kid_in_cache_skips_refresh(self, respx_mock, mocker):
+        """Cached kid returns immediately, no sleep, no JWKS fetch."""
+        sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("any"))
+
+        config = _config_with_seeded_key("k1")
+        result = await config.get_key("k1")
+
+        assert isinstance(result, RSAPublicKey)
+        assert sleep_mock.call_count == 0
+        assert keys_route.call_count == 0
+        assert config.last_refresh_attempt is None
+
+    async def test_kid_miss_merges_keys(self, respx_mock, mocker):
+        """Unknown kid: sleep once, fetch JWKS once, merge into existing keys."""
+        sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        config_route = respx_mock.get(openid_config_url())
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        config = _config_with_seeded_key("k1")
+        result = await config.get_key("k2")
+
+        assert isinstance(result, RSAPublicKey)
+        assert "k1" in config.signing_keys
+        assert "k2" in config.signing_keys
+        assert sleep_mock.call_count == 1
+        assert keys_route.call_count == 1
+        assert config_route.call_count == 0
+        assert config.last_refresh_attempt is not None
+
+    async def test_kid_miss_throttled_within_cooldown(self, respx_mock, mocker, freezer):
+        """Second unknown-kid request within 10s short-circuits to 401 with no fetch/sleep."""
+        sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        t0 = datetime(2026, 1, 1, 12, 0, 0)
+        freezer.move_to(t0)
+        config = _config_with_seeded_key("k1")
+
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown1")  # fetches, fails, sets last_refresh_attempt
+
+        freezer.move_to(t0 + timedelta(seconds=5))
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown2")
+
+        assert keys_route.call_count == 1
+        assert sleep_mock.call_count == 1
+
+    async def test_kid_miss_refetches_after_cooldown(self, respx_mock, mocker, freezer):
+        """After the cooldown elapses, a fresh unknown-kid miss triggers another fetch."""
+        sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        t0 = datetime(2026, 1, 1, 12, 0, 0)
+        freezer.move_to(t0)
+        config = _config_with_seeded_key("k1")
+
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown1")
+
+        freezer.move_to(t0 + timedelta(seconds=11))
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown2")
+
+        assert keys_route.call_count == 2
+        assert sleep_mock.call_count == 2
+
+    async def test_failed_refresh_still_updates_attempt(self, respx_mock, mocker, freezer):
+        """A 5xx from the JWKS endpoint must still set last_refresh_attempt so we don't hot-loop."""
+        sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        keys_route = respx_mock.get(keys_url()).respond(status_code=500)
+
+        t0 = datetime(2026, 1, 1, 12, 0, 0)
+        freezer.move_to(t0)
+        config = _config_with_seeded_key("k1")
+
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown1")
+        assert config.last_refresh_attempt == t0
+
+        freezer.move_to(t0 + timedelta(seconds=5))
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown2")
+
+        assert keys_route.call_count == 1  # second call throttled
+        assert sleep_mock.call_count == 1
+
+    async def test_kid_miss_does_not_evict_existing_keys(self, respx_mock, mocker):
+        """Merge semantics: if JWKS returns a disjoint set, original keys remain."""
+        mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        config = _config_with_seeded_key("k1")
+        original_key = config.signing_keys["k1"]
+
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("still-unknown")
+
+        assert "k1" in config.signing_keys
+        assert config.signing_keys["k1"] is original_key
+        assert "k2" in config.signing_keys
+
+    async def test_kid_miss_does_not_refetch_openid_config(self, respx_mock, mocker):
+        """Discovery endpoint URLs are stable; kid miss must only hit JWKS."""
+        mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        config_route = respx_mock.get(openid_config_url())
+        respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        config = _config_with_seeded_key("k1")
+        await config.get_key("k2")
+
+        assert config_route.call_count == 0
+
+    async def test_kid_miss_network_error_raises_unauthorized(self, respx_mock, mocker):
+        """A transport error during JWKS fetch surfaces as UnauthorizedException, not a 500."""
+        mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        respx_mock.get(keys_url()).mock(side_effect=httpx.ConnectError("boom"))
+
+        config = _config_with_seeded_key("k1")
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown")
+        assert config.last_refresh_attempt is not None
+
+    async def test_concurrent_kid_miss_only_fetches_once(self, respx_mock, mocker):
+        """Two coroutines racing on the same unknown kid: the lock + double-check
+        ensures exactly one JWKS fetch happens and both get the merged key."""
+        import asyncio
+
+        async def yielding_sleep() -> None:
+            await asyncio.sleep(0)
+
+        mocker.patch(
+            "fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep",
+            side_effect=yielding_sleep,
+        )
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        config = _config_with_seeded_key("k1")
+
+        results = await asyncio.gather(
+            config.get_key("k2"),
+            config.get_key("k2"),
+        )
+
+        assert all(isinstance(r, RSAPublicKey) for r in results)
+        assert keys_route.call_count == 1  # second coroutine hit the double-check, not the fetch
+
+    async def test_cancellation_during_sleep_engages_throttle(self, respx_mock, mocker, freezer):
+        """Regression: cancellation during _sleep (e.g. attacker closes TCP mid-handler)
+        must not bypass the cooldown throttle. The next attacker request within 10s must
+        short-circuit instead of paying another sleep+fetch."""
+        import asyncio
+
+        async def raise_cancelled() -> None:
+            raise asyncio.CancelledError()
+
+        sleep_mock = mocker.patch(
+            "fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep",
+            side_effect=raise_cancelled,
+        )
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        t0 = datetime(2026, 1, 1, 12, 0, 0)
+        freezer.move_to(t0)
+        config = _config_with_seeded_key("k1")
+
+        with pytest.raises(asyncio.CancelledError):
+            await config.get_key("unknown1")
+        assert config.last_refresh_attempt == t0
+        assert keys_route.call_count == 0  # cancelled before reaching the fetch
+
+        freezer.move_to(t0 + timedelta(seconds=5))
+        with pytest.raises(UnauthorizedException):
+            await config.get_key("unknown2")
+        assert sleep_mock.call_count == 1  # second call short-circuited before any sleep
+        assert keys_route.call_count == 0

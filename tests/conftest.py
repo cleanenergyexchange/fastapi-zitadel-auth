@@ -81,11 +81,10 @@ def mock_openid_empty_then_ok(respx_mock, mock_openid):
     openid_route = respx_mock.get(openid_config_url())
     openid_route.side_effect = [
         httpx.Response(json=openid_configuration(), status_code=200),
-        httpx.Response(json=openid_configuration(), status_code=200),
     ]
     yield
     assert keys_route.call_count == 2
-    assert openid_route.call_count == 2
+    assert openid_route.call_count == 1
 
 
 @pytest.fixture
