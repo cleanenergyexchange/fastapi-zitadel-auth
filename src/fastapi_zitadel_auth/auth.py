@@ -184,8 +184,8 @@ class ZitadelAuth(SecurityBase):
                 raise UnauthorizedException("Unable to process token") from error
 
             else:
-                # Authorize only on verified claims (fix for #148).
                 self.token_validator.validate_scopes(verified_claims, security_scopes.scopes)
+
                 user: UserT = self.user_model(  # type: ignore
                     claims=self.claims_model.model_validate(verified_claims),
                     access_token=access_token,
