@@ -152,7 +152,7 @@ def create_test_token(
     now = datetime.now()
     claims = {
         "aud": ["wrong-id"] if invalid_aud else [ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID],
-        "client_id": sibling_client_id if sibling_client_id else ZITADEL_CLIENT_ID,
+        "client_id": sibling_client_id if sibling_client_id is not None else ZITADEL_CLIENT_ID,
         "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
         "iss": "wrong-issuer" if invalid_iss else ZITADEL_ISSUER,

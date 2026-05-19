@@ -16,7 +16,6 @@ class TokenValidator:
     def validate_client_id(claims: dict[str, Any], expected_client_id: str) -> bool:
         """Verify the ``client_id`` claim binds the token to the expected application."""
         token_client_id = claims.get("client_id")
-        log.debug(f"token_client_id: {token_client_id} - expected_client_id: {expected_client_id}")
         if token_client_id != expected_client_id:
             log.info(
                 "Token client_id mismatch: token=%s expected=%s",
