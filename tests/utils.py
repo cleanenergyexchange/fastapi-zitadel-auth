@@ -141,12 +141,18 @@ def create_test_token(
     role: str | None = None,
     typ: str = "JWT",
     alg: str = "RS256",
+    sibling_client_id: str | None = None,
 ) -> str:
-    """Create JWT tokens for testing"""
+    """Create JWT tokens for testing.
+
+    sibling_client_id mirrors Zitadel's default for a token issued to a
+    different app in the same project: the configured API client_id still
+    appears in ``aud``, but the ``client_id`` claim points elsewhere.
+    """
     now = datetime.now()
     claims = {
         "aud": ["wrong-id"] if invalid_aud else [ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID],
-        "client_id": ZITADEL_CLIENT_ID,
+        "client_id": sibling_client_id if sibling_client_id else ZITADEL_CLIENT_ID,
         "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
         "iat": int(now.timestamp()),
         "iss": "wrong-issuer" if invalid_iss else ZITADEL_ISSUER,

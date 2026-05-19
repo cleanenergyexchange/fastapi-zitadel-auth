@@ -24,6 +24,15 @@ In your Zitadel console:
 
 4. Record the **Project Id** ("Resource Id") from the project overview. You'll need this for the `ZitadelAuth` object's `project_id` parameter.
 
+!!! warning "Multiple apps in one project"
+
+    If you run more than one application in the same Zitadel project,
+    each FastAPI service must use its own `app_client_id`. The library
+    rejects tokens issued for sibling apps, even though Zitadel's default
+    [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims)
+    includes every sibling's client_id and the project ID. See Zitadel's
+    [audience validation guidance](https://help.zitadel.com/security-best-practices-validating-audience-aud-claims-in-zitadel-access-tokens).
+
 ## Applications
 
 The project requires (at least) two applications:

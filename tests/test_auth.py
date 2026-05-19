@@ -118,6 +118,51 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
+async def test_sibling_app_token_rejected(fastapi_app, mock_openid_and_keys):
+    """Regression for #150: reject tokens minted for a sibling app in the
+    same Zitadel project. Zitadel populates ``aud`` with every sibling
+    client_id by default, so audience matching alone is insufficient — the
+    ``client_id`` claim must match the configured app."""
+    sibling_token = create_test_token(
+        role="admin",
+        sibling_client_id="some-other-app-in-same-project",
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {sibling_token}"},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 401
+        assert response.json() == {
+            "detail": {
+                "error": "invalid_token",
+                "message": "Token was not issued for this application",
+            }
+        }
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_sibling_app_token_does_not_leak_scope_requirement(fastapi_app, mock_openid_and_keys):
+    """Sibling-app rejection must run before scope validation so the response
+    body does not disclose which scope the route requires (same principle as
+    the #148 forgery-signature fix)."""
+    sibling_token = create_test_token(
+        scopes="not-the-real-scope",
+        sibling_client_id="some-other-app-in-same-project",
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {sibling_token}"},
+    ) as ac:
+        response = await ac.get("/api/protected/scope")
+    assert response.status_code == 401
+    body = response.text
+    assert "Missing required scope" not in body
+    assert "scope1" not in body
+
+
 async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_keys):
     """Test that if no valid keys are found, the token cannot be decoded."""
     async with AsyncClient(

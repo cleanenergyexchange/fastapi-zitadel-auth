@@ -113,6 +113,24 @@ class TestTokenValidator:
         with pytest.raises(UnauthorizedException):
             TokenValidator.validate_scopes(claims, ["read:messages"])
 
+    @pytest.mark.parametrize(
+        "claims,expected_client_id,expected",
+        [
+            ({"client_id": "app-a"}, "app-a", True),
+            ({"client_id": "app-b"}, "app-a", pytest.raises(UnauthorizedException)),
+            ({}, "app-a", pytest.raises(UnauthorizedException)),
+            ({"client_id": None}, "app-a", pytest.raises(UnauthorizedException)),
+            ({"client_id": ""}, "app-a", pytest.raises(UnauthorizedException)),
+        ],
+    )
+    def test_validate_client_id(self, claims, expected_client_id, expected):
+        """The client_id claim must equal the configured application id."""
+        if isinstance(expected, bool):
+            assert TokenValidator.validate_client_id(claims, expected_client_id) is expected
+        else:
+            with expected:
+                TokenValidator.validate_client_id(claims, expected_client_id)
+
     def test_validate_scopes_whitespace_handling(self):
         """Test handling of various whitespace patterns in scope strings"""
         claims = {"scope": "scope1    scope2\tscope3\n\rscope4"}
