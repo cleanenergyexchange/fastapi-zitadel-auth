@@ -131,28 +131,20 @@ class TestTokenValidator:
         claims = {"scope": scope_string}
         assert TokenValidator.validate_scopes(claims, [required_scope]) is True
 
-    def test_parse_unverified_valid_token(self, token_validator, valid_token):
+    def test_parse_and_validate_header_valid_token(self, token_validator, valid_token):
         """
-        Test that the TokenValidator can parse an unverified token
+        Test that the TokenValidator can parse the header of an unverified token
         """
-        header, claims = token_validator.parse_unverified_token(valid_token)
+        header = token_validator.parse_and_validate_header(valid_token)
 
         assert isinstance(header, dict)
-        assert isinstance(claims, dict)
         assert header["kid"] == "test-key-1"
         assert header["alg"] == "RS256"
-        assert claims["sub"] == "user123"
-        assert "exp" in claims
-        assert "iat" in claims
-        assert "iss" in claims
-        assert "aud" in claims
-        assert "nbf" in claims
-        assert "jti" in claims
 
-    def test_parse_unverified_none_token(self, token_validator):
+    def test_parse_and_validate_header_none_token(self, token_validator):
         """Test that the TokenValidator raises an exception when parsing a None token"""
         with pytest.raises(UnauthorizedException, match="Invalid token format"):
-            token_validator.parse_unverified_token(None)  # type: ignore
+            token_validator.parse_and_validate_header(None)  # type: ignore
 
     @pytest.mark.parametrize(
         "invalid_token",
@@ -173,10 +165,10 @@ class TestTokenValidator:
             "none_value",
         ],
     )
-    def test_parse_unverified_invalid_token(self, token_validator, invalid_token):
+    def test_parse_and_validate_header_invalid_token(self, token_validator, invalid_token):
         """Test that the TokenValidator raises an exception when parsing an invalid token"""
         with pytest.raises(UnauthorizedException, match="Invalid token format"):
-            token_validator.parse_unverified_token(invalid_token)
+            token_validator.parse_and_validate_header(invalid_token)
 
     def test_verify_valid_token(self, token_validator, valid_token, rsa_keys):
         """Test that the TokenValidator can verify a valid token"""
