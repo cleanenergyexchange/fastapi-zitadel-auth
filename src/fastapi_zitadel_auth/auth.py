@@ -147,9 +147,7 @@ class ZitadelAuth(SecurityBase):
             if access_token is None:
                 raise UnauthorizedException("No access token provided")
 
-            unverified_header, unverified_claims = self.token_validator.parse_unverified_token(access_token)
-            self.token_validator.validate_header(unverified_header)
-            self.token_validator.validate_scopes(unverified_claims, security_scopes.scopes)
+            unverified_header = self.token_validator.parse_and_validate_header(access_token)
 
             await self.openid_config.load_config()
             signing_key = await self.openid_config.get_key(unverified_header["kid"])
@@ -186,6 +184,8 @@ class ZitadelAuth(SecurityBase):
                 raise UnauthorizedException("Unable to process token") from error
 
             else:
+                self.token_validator.validate_scopes(verified_claims, security_scopes.scopes)
+
                 user: UserT = self.user_model(  # type: ignore
                     claims=self.claims_model.model_validate(verified_claims),
                     access_token=access_token,

@@ -299,6 +299,23 @@ async def test_exception_handled(fastapi_app, mock_openid_and_keys, mocker):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
+async def test_invalid_signature_does_not_leak_scope_requirement(fastapi_app, mock_openid_and_keys):
+    """Regression for #148: an unauthenticated forgery with scope claims must
+    return 401 (signature failure) and must not disclose the route's
+    required scope in the response body."""
+    forged = create_test_token(scopes="not-the-real-scope", evil=True)
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {forged}"},
+    ) as ac:
+        response = await ac.get("/api/protected/scope")
+    assert response.status_code == 401
+    body = response.text
+    assert "Missing required scope" not in body
+    assert "scope1" not in body
+
+
 async def test_refresh_config_on_unknown_key_id(fastapi_app, mock_openid_empty_then_ok, mocker):
     """Test that the OpenID configuration is refreshed if the key ID is initially not found."""
     sleep_mock = mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")

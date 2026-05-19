@@ -35,14 +35,10 @@ class TokenValidator:
         return True
 
     @staticmethod
-    def parse_unverified_token(
-        access_token: str,
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Parse header and claims without verification"""
+    def parse_and_validate_header(access_token: str) -> dict[str, Any]:
+        """Parse the JWT header and check `alg`/`typ` without verifying the signature"""
         try:
             header = dict(jwt.get_unverified_header(access_token))
-            claims = dict(jwt.decode(access_token, options={"verify_signature": False}))
-            return header, claims
         except Exception as e:
             log.warning(
                 "Malformed token received. %s. Error: %s",
@@ -52,11 +48,10 @@ class TokenValidator:
             )
             raise UnauthorizedException("Invalid token format") from e
 
-    @staticmethod
-    def validate_header(header: dict[str, Any]) -> None:
-        """Validate token header"""
         if header.get("alg") != "RS256" or header.get("typ") != "JWT":
             raise UnauthorizedException("Invalid token header")
+
+        return header
 
     @staticmethod
     def verify(
