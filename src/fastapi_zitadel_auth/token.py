@@ -13,6 +13,19 @@ class TokenValidator:
     """Handles JWT token validation and parsing"""
 
     @staticmethod
+    def validate_client_id(claims: dict[str, Any], expected_client_id: str) -> bool:
+        """Verify the ``client_id`` claim binds the token to the expected application."""
+        token_client_id = claims.get("client_id")
+        if token_client_id != expected_client_id:
+            log.info(
+                "Token client_id mismatch: token=%s expected=%s",
+                token_client_id,
+                expected_client_id,
+            )
+            raise UnauthorizedException("Token was not issued for this application")
+        return True
+
+    @staticmethod
     def validate_scopes(claims: dict[str, Any], required_scopes: list[str] | None) -> bool:
         """
         Validates that the token has the required scopes

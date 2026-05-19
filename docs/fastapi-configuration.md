@@ -29,6 +29,24 @@ zitadel_auth = ZitadelAuth(
         "urn:zitadel:iam:org:projects:roles": "Roles",
     }
 )
+```
+
+!!! warning "Audience and client binding"
+
+    A token is accepted only if both:
+
+    1. its `aud` claim contains the configured `app_client_id`, and
+    2. its `client_id` claim equals the configured `app_client_id`.
+
+    By default, Zitadel includes every app in a project — plus the
+    project ID — in the access token's
+    [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims),
+    so audience matching alone accepts tokens issued for sibling apps in
+    the same project. The `client_id` claim is the only reliable per-app
+    discriminator. See Zitadel's
+    [audience validation guidance](https://help.zitadel.com/security-best-practices-validating-audience-aud-claims-in-zitadel-access-tokens).
+
+```python
 
 
 # Create a dependency to validate that the user has the required role

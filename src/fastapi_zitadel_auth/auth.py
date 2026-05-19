@@ -156,7 +156,7 @@ class ZitadelAuth(SecurityBase):
                 verified_claims = self.token_validator.verify(
                     token=access_token,
                     key=signing_key,
-                    audiences=[self.client_id, self.project_id],
+                    audiences=[self.client_id],
                     issuer=self.openid_config.issuer_url,
                     token_leeway=self.token_leeway,
                 )
@@ -184,6 +184,7 @@ class ZitadelAuth(SecurityBase):
                 raise UnauthorizedException("Unable to process token") from error
 
             else:
+                self.token_validator.validate_client_id(verified_claims, self.client_id)
                 self.token_validator.validate_scopes(verified_claims, security_scopes.scopes)
 
                 user: UserT = self.user_model(  # type: ignore
