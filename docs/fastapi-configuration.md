@@ -46,6 +46,18 @@ zitadel_auth = ZitadelAuth(
     discriminator. See Zitadel's
     [audience validation guidance](https://help.zitadel.com/security-best-practices-validating-audience-aud-claims-in-zitadel-access-tokens).
 
+!!! info "Clock skew (`token_leeway`)"
+
+    The optional `token_leeway` parameter (seconds) is applied to the
+    `exp` / `nbf` / `iat` checks. Default `0`; the library hard-caps it
+    at `MAX_TOKEN_LEEWAY_SECONDS = 30` and raises `ValueError` for
+    higher values. [RFC 7519
+    §4.1.4/§4.1.5](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4)
+    permits "some small leeway, usually no more than a few minutes",
+    but a tighter cap preserves the value of `exp` for short-lived
+    OAuth2 access tokens. Synchronise host clocks via NTP rather than
+    widening this window.
+
 ```python
 
 

@@ -177,3 +177,47 @@ class TestZitadelAuth:
             description="Custom authentication description",
         )
         assert custom_auth.scheme_name == "CustomAuthScheme"
+
+
+class TestTokenLeewayValidation:
+    """Guards on ``token_leeway`` parameter of ZitadelAuth to prevent misconfiguration."""
+
+    @staticmethod
+    def _build(token_leeway):
+        return ZitadelAuth(
+            issuer_url=ZITADEL_ISSUER,
+            project_id="project_id",
+            app_client_id="client_id",
+            allowed_scopes={"openid": "OpenID Connect"},
+            token_leeway=token_leeway,
+        )
+
+    def test_default_zero_accepted(self):
+        auth = ZitadelAuth(
+            issuer_url=ZITADEL_ISSUER,
+            project_id="project_id",
+            app_client_id="client_id",
+            allowed_scopes={"openid": "OpenID Connect"},
+        )
+        assert auth.token_leeway == 0.0
+
+    def test_value_at_cap_accepted(self):
+        auth = self._build(30)
+        assert auth.token_leeway == 30.0
+
+    def test_value_above_cap_rejected(self):
+        with pytest.raises(ValueError, match="exceeds the maximum"):
+            self._build(31)
+
+    def test_negative_value_rejected(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            self._build(-1)
+
+    def test_non_numeric_value_rejected(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            self._build("5")  # type: ignore[arg-type]
+
+    def test_bool_value_rejected(self):
+        # bool is a subclass of int — guard against accidental True/False slipping through.
+        with pytest.raises(ValueError, match="non-negative"):
+            self._build(True)  # type: ignore[arg-type]

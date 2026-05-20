@@ -37,6 +37,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 log = logging.getLogger("fastapi_zitadel_auth")
 
+# Hard ceiling for ``token_leeway`` in seconds
+MAX_TOKEN_LEEWAY_SECONDS = 30.0
+
 
 class ZitadelAuth(SecurityBase):
     """
@@ -76,7 +79,9 @@ class ZitadelAuth(SecurityBase):
                 }
 
         :param token_leeway: float
-            The tolerance time in seconds for token validation
+            Clock-skew tolerance (seconds) applied to ``exp`` / ``nbf`` /
+            ``iat``. Default 0. Must be a non-negative number; values
+            above ``MAX_TOKEN_LEEWAY_SECONDS`` (30 s) raise ``ValueError``.
 
         :param cache_ttl_seconds: int
             The time in seconds to cache the OpenID configuration
@@ -99,7 +104,16 @@ class ZitadelAuth(SecurityBase):
         self.client_id = app_client_id
         self.project_id = project_id
         self.issuer_url = str(issuer_url).rstrip("/")
-        self.token_leeway = token_leeway
+
+        if isinstance(token_leeway, bool) or not isinstance(token_leeway, (int, float)) or token_leeway < 0:
+            raise ValueError("token_leeway must be a non-negative number of seconds")
+        if token_leeway > MAX_TOKEN_LEEWAY_SECONDS:
+            raise ValueError(
+                f"token_leeway={token_leeway} exceeds the maximum of "
+                f"{MAX_TOKEN_LEEWAY_SECONDS} seconds. "
+                "Synchronize clocks via NTP instead of widening the window."
+            )
+        self.token_leeway = float(token_leeway)
 
         if not issubclass(claims_model, JwtClaims):
             raise ValueError("claims_model must be a subclass of JwtClaims")
