@@ -59,13 +59,14 @@ class OpenIdConfig(BaseModel):
                     config = await self._fetch_config(client)
                     signing_keys = await self._fetch_signing_keys(client)
 
-                self.issuer_url = config["issuer"]
-                self.authorization_url = config["authorization_endpoint"]
-                self.token_url = config["token_endpoint"]
-                self.jwks_uri = config["jwks_uri"]
+                self._validate_issuer(config)
+
                 self.signing_keys = signing_keys
                 self.last_refresh_timestamp = current_time
 
+            except UnauthorizedException:
+                self.reset_cache()
+                raise
             except Exception as e:
                 log.exception(f"Unable to refresh configuration from identity provider: {e}")
                 self.reset_cache()
@@ -144,6 +145,17 @@ class OpenIdConfig(BaseModel):
 
         elapsed = datetime.now() - self.last_refresh_timestamp
         return elapsed > timedelta(seconds=self.cache_ttl_seconds)
+
+    def _validate_issuer(self, config: dict[str, Any]) -> None:
+        """Enforce RFC 8414 §3.3: the discovery response's ``issuer`` must match the
+        configured ``issuer_url``. Otherwise, the response MUST NOT be used."""
+        configured = self.issuer_url.rstrip("/")
+        discovered = str(config["issuer"]).rstrip("/")
+        if configured != discovered:
+            log.warning("OIDC discovery issuer mismatch: configured=%s discovered=%s", configured, discovered)
+            raise UnauthorizedException(
+                f"OIDC discovery issuer mismatch: configured={configured} discovered={discovered}"
+            )
 
     async def _fetch_config(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """GET the OIDC discovery document."""
