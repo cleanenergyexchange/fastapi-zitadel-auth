@@ -86,10 +86,10 @@ class TestOpenIdConfig:
         """Test that OpenIdConfig loads config and keys correctly"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer_url="",
+            issuer_url=ZITADEL_ISSUER,
             config_url=config_url,
-            authorization_url="",
-            token_url="",
+            authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
             jwks_uri=keys_url(),
         )
 
@@ -98,10 +98,12 @@ class TestOpenIdConfig:
 
         await config.load_config()
 
-        assert config.issuer_url == mock_openid_config["issuer"]
-        assert config.authorization_url == mock_openid_config["authorization_endpoint"]
-        assert config.token_url == mock_openid_config["token_endpoint"]
-        assert config.jwks_uri == mock_openid_config["jwks_uri"]
+        # Configured URLs are preserved verbatim; discovery is used only to verify
+        # the issuer and fetch signing keys (RFC 8414 §3.3, GH #152).
+        assert config.issuer_url == ZITADEL_ISSUER
+        assert config.authorization_url == f"{ZITADEL_ISSUER}/oauth/v2/authorize"
+        assert config.token_url == f"{ZITADEL_ISSUER}/oauth/v2/token"
+        assert config.jwks_uri == keys_url()
         assert isinstance(config.cache_ttl_seconds, int)
         assert len(config.signing_keys) == 2
         assert all(isinstance(key, RSAPublicKey) for key in config.signing_keys.values())
@@ -111,10 +113,10 @@ class TestOpenIdConfig:
         """Test that config is cached and only refreshed after expiry"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer_url="",
+            issuer_url=ZITADEL_ISSUER,
             config_url=config_url,
-            authorization_url="",
-            token_url="",
+            authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
             jwks_uri=keys_url(),
             cache_ttl_seconds=cache_ttl_seconds,
         )
@@ -148,10 +150,10 @@ class TestOpenIdConfig:
         """Test that invalid keys are filtered out"""
         config_url = openid_config_url()
         config = OpenIdConfig(
-            issuer_url="",
+            issuer_url=ZITADEL_ISSUER,
             config_url=config_url,
-            authorization_url="",
-            token_url="",
+            authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
             jwks_uri=keys_url(),
         )
 
@@ -206,6 +208,38 @@ class TestOpenIdConfig:
             signing_keys={"kid": signing_key} if signing_key else {},
         )
         assert config._needs_refresh() == expected
+
+    async def test_issuer_mismatch_raises(self, respx_mock, mock_jwks):
+        """Per RFC 8414 §3.3, a discovery response whose `issuer` differs from the
+        configured issuer_url must be rejected and must not overwrite the configured
+        value."""
+        config_url = openid_config_url()
+        config = OpenIdConfig(
+            issuer_url=ZITADEL_ISSUER,
+            config_url=config_url,
+            authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
+            jwks_uri=keys_url(),
+        )
+        bad_discovery = {
+            "issuer": "https://attacker.example.com",
+            "authorization_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            "token_endpoint": f"{ZITADEL_ISSUER}/oauth/v2/token",
+            "jwks_uri": f"{ZITADEL_ISSUER}/oauth/v2/keys",
+        }
+        respx_mock.get(config_url).respond(json=bad_discovery)
+        respx_mock.get(keys_url()).respond(json=mock_jwks)
+
+        with pytest.raises(UnauthorizedException) as exc_info:
+            await config.load_config()
+
+        assert exc_info.value.status_code == 401
+        detail = exc_info.value.detail
+        assert isinstance(detail, dict)
+        assert detail["error"] == "invalid_token"
+        assert "issuer mismatch" in detail["message"]
+        assert config.issuer_url == ZITADEL_ISSUER
+        assert config.signing_keys == {}
 
 
 @pytest.mark.asyncio
