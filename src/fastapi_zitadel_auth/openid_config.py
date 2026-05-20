@@ -20,6 +20,7 @@ a freshly-issued ``kid``.
 
 from asyncio import Lock, sleep
 from datetime import datetime, timedelta
+from importlib.metadata import version as _pkg_version
 import logging
 from typing import Any
 import httpx
@@ -30,6 +31,13 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from fastapi_zitadel_auth.exceptions import UnauthorizedException
 
 log = logging.getLogger("fastapi_zitadel_auth")
+
+try:
+    _USER_AGENT = f"fastapi-zitadel-auth/{_pkg_version('fastapi-zitadel-auth')}"
+except Exception:  # pragma: no cover
+    _USER_AGENT = "fastapi-zitadel-auth/unknown"
+
+_HTTP_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
 
 class OpenIdConfig(BaseModel):
@@ -55,7 +63,9 @@ class OpenIdConfig(BaseModel):
             log.debug("Loading OpenID configuration.")
             current_time = datetime.now()
             try:
-                async with httpx.AsyncClient(timeout=10, http2=True) as client:
+                async with httpx.AsyncClient(
+                    timeout=_HTTP_TIMEOUT, http2=True, headers={"User-Agent": _USER_AGENT}
+                ) as client:
                     config = await self._fetch_config(client)
                     self._validate_issuer(config)
                     signing_keys = await self._fetch_signing_keys(client)
@@ -118,7 +128,9 @@ class OpenIdConfig(BaseModel):
     async def _refresh_jwks_merge(self) -> None:
         """Fetch JWKS and merge new entries into ``signing_keys``."""
         try:
-            async with httpx.AsyncClient(timeout=10, http2=True) as client:
+            async with httpx.AsyncClient(
+                timeout=_HTTP_TIMEOUT, http2=True, headers={"User-Agent": _USER_AGENT}
+            ) as client:
                 new_keys = await self._fetch_signing_keys(client)
             self.signing_keys = {**self.signing_keys, **new_keys}
         except Exception as e:

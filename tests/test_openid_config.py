@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.exceptions import UnauthorizedException
-from fastapi_zitadel_auth.openid_config import OpenIdConfig
+from fastapi_zitadel_auth.openid_config import _USER_AGENT, OpenIdConfig
 from tests.utils import valid_key, ZITADEL_ISSUER, openid_config_url, keys_url
 
 
@@ -209,6 +209,26 @@ class TestOpenIdConfig:
         )
         assert config._needs_refresh() == expected
 
+    async def test_user_agent_sent_on_discovery_and_jwks(self, respx_mock, mock_openid_config, mock_jwks):
+        """Outbound discovery + JWKS requests must carry a library-identifying User-Agent
+        so the IdP operator can distinguish this library's traffic (GH #154)."""
+        config_url = openid_config_url()
+        config = OpenIdConfig(
+            issuer_url=ZITADEL_ISSUER,
+            config_url=config_url,
+            authorization_url=f"{ZITADEL_ISSUER}/oauth/v2/authorize",
+            token_url=f"{ZITADEL_ISSUER}/oauth/v2/token",
+            jwks_uri=keys_url(),
+        )
+        config_route = respx_mock.get(config_url).respond(json=mock_openid_config)
+        jwks_route = respx_mock.get(mock_openid_config["jwks_uri"]).respond(json=mock_jwks)
+
+        await config.load_config()
+
+        assert _USER_AGENT.startswith("fastapi-zitadel-auth/")
+        assert config_route.calls.last.request.headers["user-agent"] == _USER_AGENT
+        assert jwks_route.calls.last.request.headers["user-agent"] == _USER_AGENT
+
     async def test_issuer_mismatch_raises(self, respx_mock, mock_jwks):
         """Per RFC 8414 §3.3, a discovery response whose `issuer` differs from the
         configured issuer_url must be rejected and must not overwrite the configured
@@ -348,6 +368,17 @@ class TestKidMissRefresh:
         assert "k1" in config.signing_keys
         assert config.signing_keys["k1"] is original_key
         assert "k2" in config.signing_keys
+
+    async def test_kid_miss_jwks_fetch_sends_user_agent(self, respx_mock, mocker):
+        """The on-demand JWKS refresh path (the abuse vector cited in GH #154) must
+        also carry the library User-Agent, not just the periodic load_config path."""
+        mocker.patch("fastapi_zitadel_auth.openid_config.OpenIdConfig._sleep")
+        keys_route = respx_mock.get(keys_url()).respond(json=_jwks_with("k2"))
+
+        config = _config_with_seeded_key("k1")
+        await config.get_key("k2")
+
+        assert keys_route.calls.last.request.headers["user-agent"] == _USER_AGENT
 
     async def test_kid_miss_does_not_refetch_openid_config(self, respx_mock, mocker):
         """Discovery endpoint URLs are stable; kid miss must only hit JWKS."""
