@@ -3,7 +3,7 @@ Authentication module for Zitadel OAuth2
 """
 
 import logging
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Annotated, Type
 
 from fastapi.exceptions import HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer, SecurityScopes
@@ -17,7 +17,7 @@ from jwt import (
     InvalidTokenError,
     MissingRequiredClaimError,
 )
-from pydantic import HttpUrl
+from pydantic import Field, HttpUrl, TypeAdapter, ValidationError
 from starlette.requests import Request
 
 from .exceptions import UnauthorizedException, InvalidRequestException, ForbiddenException
@@ -39,6 +39,15 @@ log = logging.getLogger("fastapi_zitadel_auth")
 
 # Hard ceiling for ``token_leeway`` in seconds
 MAX_TOKEN_LEEWAY_SECONDS = 30.0
+
+# Strict mode rejects bool→float coercion; allow_inf_nan=False rejects NaN/inf.
+_TOKEN_LEEWAY_VALIDATOR: TypeAdapter[float] = TypeAdapter(
+    Annotated[float, Field(ge=0, le=MAX_TOKEN_LEEWAY_SECONDS, allow_inf_nan=False, strict=True)]
+)
+
+# Validate ``issuer_url`` shape so a typo or relative URL fails at construction time
+# rather than at the first OIDC discovery call.
+_ISSUER_URL_VALIDATOR: TypeAdapter[HttpUrl] = TypeAdapter(HttpUrl)
 
 
 class ZitadelAuth(SecurityBase):
@@ -63,7 +72,9 @@ class ZitadelAuth(SecurityBase):
         Initialize the ZitadelAuth object
 
         :param issuer_url: HttpUrl | str
-            The Zitadel issuer URL
+            The Zitadel issuer URL. Must be a valid absolute ``http`` /
+            ``https`` URL; invalid values raise ``ValueError`` at
+            construction time.
 
         :param project_id: str
             The Zitadel project ID
@@ -80,8 +91,7 @@ class ZitadelAuth(SecurityBase):
 
         :param token_leeway: float
             Clock-skew tolerance (seconds) applied to ``exp`` / ``nbf`` /
-            ``iat``. Default 0. Must be a non-negative number; values
-            above ``MAX_TOKEN_LEEWAY_SECONDS`` (30 s) raise ``ValueError``.
+            ``iat``. Default: 0. Must be a finite number in [0, 30] seconds.
 
         :param cache_ttl_seconds: int
             The time in seconds to cache the OpenID configuration
@@ -103,17 +113,21 @@ class ZitadelAuth(SecurityBase):
 
         self.client_id = app_client_id
         self.project_id = project_id
-        self.issuer_url = str(issuer_url).rstrip("/")
 
-        if isinstance(token_leeway, bool) or not isinstance(token_leeway, (int, float)) or token_leeway < 0:
-            raise ValueError("token_leeway must be a non-negative number of seconds")
-        if token_leeway > MAX_TOKEN_LEEWAY_SECONDS:
+        try:
+            validated_issuer_url = _ISSUER_URL_VALIDATOR.validate_python(issuer_url)
+        except ValidationError as e:
+            raise ValueError(f"issuer_url is invalid: {e.errors()[0]['msg']}") from e
+        self.issuer_url = str(validated_issuer_url).rstrip("/")
+
+        try:
+            self.token_leeway = _TOKEN_LEEWAY_VALIDATOR.validate_python(token_leeway)
+        except ValidationError as e:
             raise ValueError(
-                f"token_leeway={token_leeway} exceeds the maximum of "
-                f"{MAX_TOKEN_LEEWAY_SECONDS} seconds. "
-                "Synchronize clocks via NTP instead of widening the window."
-            )
-        self.token_leeway = float(token_leeway)
+                f"token_leeway is invalid: {e.errors()[0]['msg']}. "
+                f"Must be a finite number in [0, {MAX_TOKEN_LEEWAY_SECONDS}] seconds; "
+                "synchronize clocks via NTP rather than widening this window."
+            ) from e
 
         if not issubclass(claims_model, JwtClaims):
             raise ValueError("claims_model must be a subclass of JwtClaims")
