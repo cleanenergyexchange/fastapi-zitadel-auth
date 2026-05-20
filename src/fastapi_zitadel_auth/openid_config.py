@@ -57,9 +57,8 @@ class OpenIdConfig(BaseModel):
             try:
                 async with httpx.AsyncClient(timeout=10, http2=True) as client:
                     config = await self._fetch_config(client)
+                    self._validate_issuer(config)
                     signing_keys = await self._fetch_signing_keys(client)
-
-                self._validate_issuer(config)
 
                 self.signing_keys = signing_keys
                 self.last_refresh_timestamp = current_time

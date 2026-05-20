@@ -234,7 +234,10 @@ class TestOpenIdConfig:
             await config.load_config()
 
         assert exc_info.value.status_code == 401
-        assert "issuer mismatch" in str(exc_info.value.detail)
+        detail = exc_info.value.detail
+        assert isinstance(detail, dict)
+        assert detail["error"] == "invalid_token"
+        assert "issuer mismatch" in detail["message"]
         assert config.issuer_url == ZITADEL_ISSUER
         assert config.signing_keys == {}
 
