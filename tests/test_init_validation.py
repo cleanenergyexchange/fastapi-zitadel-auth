@@ -141,12 +141,12 @@ class TestTokenLeewayValidation:
 
     def test_value_above_cap_rejected(self):
         """A value above the 30 s cap raises ValueError."""
-        with pytest.raises(ValueError, match="less than or equal to 30"):
+        with pytest.raises(ValueError, match="token_leeway is invalid"):
             self._build(31)
 
     def test_negative_value_rejected(self):
         """A negative value raises ValueError."""
-        with pytest.raises(ValueError, match="greater than or equal to 0"):
+        with pytest.raises(ValueError, match="token_leeway is invalid"):
             self._build(-1)
 
     def test_non_numeric_value_rejected(self):
@@ -161,17 +161,17 @@ class TestTokenLeewayValidation:
 
     def test_nan_value_rejected(self):
         """NaN is rejected by the allow_inf_nan=False constraint."""
-        with pytest.raises(ValueError, match="finite"):
+        with pytest.raises(ValueError, match="token_leeway is invalid"):
             self._build(float("nan"))
 
     def test_positive_infinity_rejected(self):
         """Positive infinity is rejected by the allow_inf_nan=False constraint."""
-        with pytest.raises(ValueError, match="finite"):
+        with pytest.raises(ValueError, match="token_leeway is invalid"):
             self._build(float("inf"))
 
     def test_negative_infinity_rejected(self):
         """Negative infinity is rejected by the allow_inf_nan=False constraint."""
-        with pytest.raises(ValueError, match="finite"):
+        with pytest.raises(ValueError, match="token_leeway is invalid"):
             self._build(float("-inf"))
 
 
