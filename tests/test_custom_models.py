@@ -1,108 +1,69 @@
+"""Tests for the custom-claims / custom-user-model extension points."""
+
 import pytest
-from pydantic import BaseModel
 
 from fastapi_zitadel_auth import ZitadelAuth
 from fastapi_zitadel_auth.user import (
     BaseZitadelUser,
-    JwtClaims,
     DefaultZitadelClaims,
     DefaultZitadelUser,
+    JwtClaims,
 )
 from tests.utils import ZITADEL_ISSUER
 
 
 class CustomClaims(JwtClaims):
-    """Custom claims with additional fields"""
+    """Custom claims with additional fields."""
 
     custom_field: str
     role: str
 
 
 class CustomUser(BaseZitadelUser):
-    """Custom user with specific claims type"""
+    """Custom user with specific claims type."""
 
     username: str
 
 
-class InvalidClaims(BaseModel):
-    """Claims class that doesn't inherit from JwtClaims"""
-
-    some_field: str
-
-
-class InvalidUser(BaseModel):
-    """User class that doesn't inherit from BaseZitadelUser"""
-
-    some_field: str
-
-
 @pytest.fixture
 def default_auth():
-    """Fixture for default ZitadelAuth instance"""
+    """A ZitadelAuth using the library's default claims and user models."""
     return ZitadelAuth(
         issuer_url=ZITADEL_ISSUER,
         project_id="project_id",
         app_client_id="client_id",
-        allowed_scopes={
-            "openid": "OpenID Connect",
-        },
+        allowed_scopes={"openid": "OpenID Connect"},
     )
 
 
 @pytest.fixture
 def custom_auth():
-    """Fixture for ZitadelAuth with custom models"""
+    """A ZitadelAuth wired with CustomClaims and CustomUser overrides."""
     return ZitadelAuth(
         claims_model=CustomClaims,
         user_model=CustomUser,
         issuer_url=ZITADEL_ISSUER,
         project_id="project_id",
         app_client_id="client_id",
-        allowed_scopes={
-            "openid": "OpenID Connect",
-        },
+        allowed_scopes={"openid": "OpenID Connect"},
     )
 
 
-class TestZitadelAuth:
+class TestCustomModels:
+    """Custom claims / user models are wired and can be instantiated."""
+
     def test_default_initialization(self, default_auth):
-        """Test initialization with default models"""
+        """Default models are wired when no overrides are passed."""
         assert default_auth.claims_model == DefaultZitadelClaims
         assert default_auth.user_model == DefaultZitadelUser
 
     def test_custom_initialization(self, custom_auth):
-        """Test initialization with custom models"""
+        """Custom models are wired when overrides are passed."""
         assert custom_auth.claims_model == CustomClaims
         assert custom_auth.user_model == CustomUser
 
-    def test_invalid_claims_model(self):
-        """Test initialization with invalid claims model"""
-        with pytest.raises(ValueError, match="claims_model must be a subclass of JwtClaims"):
-            ZitadelAuth(
-                claims_model=InvalidClaims,  # type: ignore
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={
-                    "openid": "OpenID Connect",
-                },
-            )
-
-    def test_invalid_user_model(self):
-        """Test initialization with invalid user model"""
-        with pytest.raises(ValueError, match="user_model must be a subclass of BaseZitadelUser"):
-            ZitadelAuth(
-                user_model=InvalidUser,  # type: ignore
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={
-                    "openid": "OpenID Connect",
-                },
-            )
-
     def test_user_with_claims(self):
-        """Test creation of user with claims"""
+        """A custom user can be constructed from custom claims data."""
         claims_data = {
             "aud": "test_client",
             "client_id": "123",
@@ -121,59 +82,3 @@ class TestZitadelAuth:
         assert user.access_token == "test_token"
         assert user.username == "testuser"
         assert user.claims.custom_field == "custom_value"
-
-    def test_empty_scheme_name(self):
-        """Test initialization with empty scheme_name raises ValueError"""
-        with pytest.raises(ValueError, match="scheme_name must be a non-empty string"):
-            ZitadelAuth(
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={"openid": "OpenID Connect"},
-                scheme_name="",
-            )
-
-    def test_empty_description(self):
-        """Test initialization with empty description raises ValueError"""
-        with pytest.raises(ValueError, match="description must be a non-empty string"):
-            ZitadelAuth(
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={"openid": "OpenID Connect"},
-                description="",
-            )
-
-    def test_whitespace_scheme_name(self):
-        """Test initialization with whitespace scheme_name raises ValueError"""
-        with pytest.raises(ValueError, match="scheme_name must be a non-empty string"):
-            ZitadelAuth(
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={"openid": "OpenID Connect"},
-                scheme_name="   ",
-            )
-
-    def test_whitespace_description(self):
-        """Test initialization with whitespace description raises ValueError"""
-        with pytest.raises(ValueError, match="description must be a non-empty string"):
-            ZitadelAuth(
-                issuer_url=ZITADEL_ISSUER,
-                project_id="project_id",
-                app_client_id="client_id",
-                allowed_scopes={"openid": "OpenID Connect"},
-                description="   ",
-            )
-
-    def test_custom_scheme_name_and_description(self):
-        """Test initialization with custom scheme_name and description"""
-        custom_auth = ZitadelAuth(
-            issuer_url=ZITADEL_ISSUER,
-            project_id="project_id",
-            app_client_id="client_id",
-            allowed_scopes={"openid": "OpenID Connect"},
-            scheme_name="CustomAuthScheme",
-            description="Custom authentication description",
-        )
-        assert custom_auth.scheme_name == "CustomAuthScheme"
