@@ -142,22 +142,54 @@ def create_test_token(
     typ: str = "JWT",
     alg: str = "RS256",
     sibling_client_id: str | None = None,
+    aud: list[str] | str | None = None,
 ) -> str:
-    """Create JWT tokens for testing.
+    """Build a signed RS256 JWT shaped like a Zitadel access token.
 
-    sibling_client_id mirrors Zitadel's default for a token issued to a
-    different app in the same project: the configured API client_id still
-    appears in ``aud``, but the ``client_id`` claim points elsewhere.
+    The defaults produce a valid token: signed with the trusted test key,
+    issued by ``ZITADEL_ISSUER`` to the configured app, with
+    ``aud=[ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID]``. Each parameter sets
+    one aspect of it:
+
+    - ``expired`` / ``invalid_iss`` / ``invalid_aud``: break the respective claim.
+    - ``evil``: sign with an untrusted key while the header claims a trusted ``kid``.
+    - ``kid`` / ``typ`` / ``alg``: set the JWT header fields.
+    - ``scopes``: the space-separated ``scope`` claim.
+    - ``role``: assert a Zitadel project role.
+    - ``sibling_client_id``: set ``client_id`` to another app of the same
+      project; ``aud`` keeps its default.
+    - ``aud``: replace the audience entirely (overrides ``invalid_aud``),
+      e.g. ``[ZITADEL_PROJECT_ID]`` for a service-user token. A bare string
+      is allowed (RFC 7519 permits a single-string ``aud``).
     """
     now = datetime.now()
+    issued_at = int(now.timestamp())
+
+    expires_at = int((now + timedelta(hours=1)).timestamp())
+    if expired:
+        expires_at = int((now - timedelta(hours=1)).timestamp())
+
+    issuer = ZITADEL_ISSUER
+    if invalid_iss:
+        issuer = "wrong-issuer"
+
+    client_id = ZITADEL_CLIENT_ID
+    if sibling_client_id is not None:
+        client_id = sibling_client_id
+
+    if aud is None:
+        aud = [ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID]
+        if invalid_aud:
+            aud = ["wrong-id"]
+
     claims = {
-        "aud": ["wrong-id"] if invalid_aud else [ZITADEL_PROJECT_ID, ZITADEL_CLIENT_ID],
-        "client_id": sibling_client_id if sibling_client_id is not None else ZITADEL_CLIENT_ID,
-        "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
-        "iat": int(now.timestamp()),
-        "iss": "wrong-issuer" if invalid_iss else ZITADEL_ISSUER,
+        "aud": aud,
+        "client_id": client_id,
+        "exp": expires_at,
+        "iat": issued_at,
+        "iss": issuer,
         "sub": "user123",
-        "nbf": int(now.timestamp()),
+        "nbf": issued_at,
         "jti": "unique-token-id",
         "scope": scopes,
     }
@@ -165,8 +197,11 @@ def create_test_token(
     if role:
         claims[f"urn:zitadel:iam:org:project:{ZITADEL_PROJECT_ID}:roles"] = {role: {"role_id": ZITADEL_PRIMARY_DOMAIN}}
 
-    # For evil token use the evil key but claim it's from the valid key
-    signing_key = evil_key if evil else valid_key
+    signing_key = valid_key
+    if evil:
+        # Sign with the untrusted key while the header still claims a trusted kid
+        signing_key = evil_key
+
     headers = {"kid": kid, "typ": typ, "alg": alg}
 
     private_key = signing_key.private_bytes(

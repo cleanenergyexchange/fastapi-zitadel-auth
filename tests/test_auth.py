@@ -118,49 +118,53 @@ async def test_invalid_token_audience(fastapi_app, mock_openid_and_keys):
         assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-async def test_sibling_app_token_rejected(fastapi_app, mock_openid_and_keys):
-    """Regression for #150: reject tokens minted for a sibling app in the
-    same Zitadel project. Zitadel populates ``aud`` with every sibling
-    client_id by default, so audience matching alone is insufficient — the
-    ``client_id`` claim must match the configured app."""
-    sibling_token = create_test_token(
-        role="admin",
-        sibling_client_id="some-other-app-in-same-project",
-    )
+@pytest.mark.parametrize(
+    "caller_client_id,caller_aud",
+    [
+        # the configured app itself (e.g. your SPA / Swagger UI)
+        (ZITADEL_CLIENT_ID, None),
+        # ``aud`` carries only the app client id (no project id)
+        (ZITADEL_CLIENT_ID, [ZITADEL_CLIENT_ID]),
+        # another client app in the same project (e.g. a second SPA / external client)
+        ("external-client", None),
+        # a service account: its own client_id, and ``aud`` carries only the
+        # project id (the shape produced by the jwt-bearer flow with the
+        # ``urn:zitadel:iam:org:project:id:{project_id}:aud`` scope, see #169)
+        ("service-account-xyz", [ZITADEL_PROJECT_ID]),
+        # same, with ``aud`` as a bare string (RFC 7519 permits a single-string aud)
+        ("service-account-xyz", ZITADEL_PROJECT_ID),
+    ],
+)
+async def test_project_caller_matrix(fastapi_app, mock_openid_and_keys, caller_client_id, caller_aud):
+    """Every client of the Zitadel project is accepted —
+    the configured app, sibling apps (e.g. multiple frontends / external
+    clients), and service accounts created after deployment. The project is
+    the trust boundary; tokens only need the project id (or app client id)
+    in ``aud``."""
+    access_token = create_test_token(role="admin", sibling_client_id=caller_client_id, aud=caller_aud)
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"Authorization": f"Bearer {sibling_token}"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    ) as ac:
+        response = await ac.get("/api/protected/admin")
+        assert response.status_code == 200, response.text
+        # the client_id claim must identify the caller: the documented
+        # per-client restriction recipe relies on user.claims.client_id
+        assert response.json()["user"]["claims"]["client_id"] == caller_client_id
+
+
+async def test_empty_audience_rejected(fastapi_app, mock_openid_and_keys):
+    """A token with an empty ``aud`` list matches no accepted audience."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_test_token(role="admin", aud=[])},
     ) as ac:
         response = await ac.get("/api/protected/admin")
         assert response.status_code == 401
-        assert response.json() == {
-            "detail": {
-                "error": "invalid_token",
-                "message": "Token was not issued for this application",
-            }
-        }
+        assert response.json() == {"detail": {"error": "invalid_token", "message": "Token contains invalid claims"}}
         assert response.headers["WWW-Authenticate"] == "Bearer"
-
-
-async def test_sibling_app_token_does_not_leak_scope_requirement(fastapi_app, mock_openid_and_keys):
-    """Sibling-app rejection must run before scope validation so the response
-    body does not disclose which scope the route requires (same principle as
-    the #148 forgery-signature fix)."""
-    sibling_token = create_test_token(
-        scopes="not-the-real-scope",
-        sibling_client_id="some-other-app-in-same-project",
-    )
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-        headers={"Authorization": f"Bearer {sibling_token}"},
-    ) as ac:
-        response = await ac.get("/api/protected/scope")
-    assert response.status_code == 401
-    body = response.text
-    assert "Missing required scope" not in body
-    assert "scope1" not in body
 
 
 async def test_no_valid_keys_for_token(fastapi_app, mock_openid_and_no_valid_keys):

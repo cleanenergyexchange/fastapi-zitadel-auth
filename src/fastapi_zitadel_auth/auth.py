@@ -77,10 +77,13 @@ class ZitadelAuth(SecurityBase):
             construction time.
 
         :param project_id: str
-            The Zitadel project ID
+            The Zitadel project ID. Tokens are accepted when their ``aud``
+            claim carries the project ID (or the app client ID).
 
         :param app_client_id: str
-            The Zitadel application client ID
+            The client ID of the OAuth client that obtains tokens (e.g. your
+            frontend / SPA application). It appears as the token's
+            ``client_id`` claim — it is *not* the API's own identifier.
 
         :param allowed_scopes: dict[str, str]
             The allowed scopes for the application. Key is the scope name and value is the description.
@@ -111,7 +114,12 @@ class ZitadelAuth(SecurityBase):
             Default: "Zitadel OAuth2 authentication using bearer token"
         """
 
+        if not isinstance(app_client_id, str) or not app_client_id.strip():
+            raise ValueError("app_client_id must be a non-empty string")
         self.client_id = app_client_id
+
+        if not isinstance(project_id, str) or not project_id.strip():
+            raise ValueError("project_id must be a non-empty string")
         self.project_id = project_id
 
         try:
@@ -184,7 +192,7 @@ class ZitadelAuth(SecurityBase):
                 verified_claims = self.token_validator.verify(
                     token=access_token,
                     key=signing_key,
-                    audiences=[self.client_id],
+                    audiences=[self.client_id, self.project_id],
                     issuer=self.openid_config.issuer_url,
                     token_leeway=self.token_leeway,
                 )
@@ -212,7 +220,6 @@ class ZitadelAuth(SecurityBase):
                 raise UnauthorizedException("Unable to process token") from error
 
             else:
-                self.token_validator.validate_client_id(verified_claims, self.client_id)
                 self.token_validator.validate_scopes(verified_claims, security_scopes.scopes)
 
                 user: UserT = self.user_model(  # type: ignore
