@@ -175,6 +175,64 @@ class TestTokenLeewayValidation:
             self._build(float("-inf"))
 
 
+class TestAppClientIdValidation:
+    """Guards on ``app_client_id`` — it is an accepted audience, so it must be set."""
+
+    @staticmethod
+    def _build(app_client_id):
+        """Construct a ZitadelAuth with the supplied app_client_id and library defaults elsewhere."""
+        return ZitadelAuth(
+            issuer_url=ZITADEL_ISSUER,
+            project_id="project_id",
+            app_client_id=app_client_id,
+            allowed_scopes={"openid": "OpenID Connect"},
+        )
+
+    def test_empty_string_rejected(self):
+        """An empty app_client_id raises ValueError."""
+        with pytest.raises(ValueError, match="app_client_id must be a non-empty string"):
+            self._build("")
+
+    def test_whitespace_only_rejected(self):
+        """A whitespace-only app_client_id raises ValueError."""
+        with pytest.raises(ValueError, match="app_client_id must be a non-empty string"):
+            self._build("   ")
+
+    def test_non_string_rejected(self):
+        """A non-string app_client_id raises ValueError."""
+        with pytest.raises(ValueError, match="app_client_id must be a non-empty string"):
+            self._build(None)
+
+
+class TestProjectIdValidation:
+    """Guards on ``project_id`` — it is an accepted audience in "project" mode, so it must be set."""
+
+    @staticmethod
+    def _build(project_id):
+        """Construct a ZitadelAuth with the supplied project_id and library defaults elsewhere."""
+        return ZitadelAuth(
+            issuer_url=ZITADEL_ISSUER,
+            project_id=project_id,
+            app_client_id="client_id",
+            allowed_scopes={"openid": "OpenID Connect"},
+        )
+
+    def test_empty_string_rejected(self):
+        """An empty project_id raises ValueError."""
+        with pytest.raises(ValueError, match="project_id must be a non-empty string"):
+            self._build("")
+
+    def test_whitespace_only_rejected(self):
+        """A whitespace-only project_id raises ValueError."""
+        with pytest.raises(ValueError, match="project_id must be a non-empty string"):
+            self._build("   ")
+
+    def test_non_string_rejected(self):
+        """A non-string project_id raises ValueError."""
+        with pytest.raises(ValueError, match="project_id must be a non-empty string"):
+            self._build(123)
+
+
 class TestIssuerUrlValidation:
     """Guards on ``issuer_url`` — fail at construction time, not at first OIDC discovery."""
 

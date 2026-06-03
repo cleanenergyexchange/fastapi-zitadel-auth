@@ -1,29 +1,19 @@
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 
+if TYPE_CHECKING:  # pragma: no cover
+    from jwt.types import Options
+
 log = logging.getLogger("fastapi_zitadel_auth")
 
 
 class TokenValidator:
     """Handles JWT token validation and parsing"""
-
-    @staticmethod
-    def validate_client_id(claims: dict[str, Any], expected_client_id: str) -> bool:
-        """Verify the ``client_id`` claim binds the token to the expected application."""
-        token_client_id = claims.get("client_id")
-        if token_client_id != expected_client_id:
-            log.info(
-                "Token client_id mismatch: token=%s expected=%s",
-                token_client_id,
-                expected_client_id,
-            )
-            raise UnauthorizedException("Token was not issued for this application")
-        return True
 
     @staticmethod
     def validate_scopes(claims: dict[str, Any], required_scopes: list[str] | None) -> bool:
@@ -75,7 +65,7 @@ class TokenValidator:
         token_leeway: float = 0,
     ) -> dict[str, Any]:
         """Verify token signature and claims with provided key"""
-        options = {
+        options: "Options" = {
             "verify_signature": True,
             "verify_exp": True,
             "verify_nbf": True,
