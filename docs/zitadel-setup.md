@@ -1,12 +1,11 @@
 # Zitadel setup guide
 
-This guide walks you through setting up Zitadel authentication for your FastAPI application.
+Set up Zitadel for your FastAPI application.
 
 !!! warning "Set up as described"
 
-    This is an opinionated setup for a demo application.
-    Follow the steps exactly as described first.
-    Adjust settings for your use case only after a successful implementation.
+    This is an opinionated demo setup.
+    Follow the steps exactly first; adjust them after it works.
 
 
 ## Project configuration
@@ -24,14 +23,17 @@ In your Zitadel console:
 
 4. Record the **Project Id** ("Resource Id") from the project overview. You'll need this for the `ZitadelAuth` object's `project_id` parameter.
 
-!!! warning "Multiple apps in one project"
+!!! info "Multiple apps in one project"
 
-    If you run more than one application in the same Zitadel project,
-    each FastAPI service must use its own `app_client_id`. The library
-    rejects tokens issued for sibling apps, even though Zitadel's default
-    [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims)
-    includes every sibling's client_id and the project ID. See Zitadel's
-    [audience validation guidance](https://help.zitadel.com/security-best-practices-validating-audience-aud-claims-in-zitadel-access-tokens).
+    The API accepts tokens issued to **any** app in this project. Zitadel
+    puts the project ID in every token's
+    [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims);
+    the project is the trust boundary.
+
+    To keep two apps apart, use separate projects —
+    [roles are project-scoped](https://zitadel.com/docs/concepts/structure/projects).
+    To limit an endpoint to one client app, check the `client_id` claim in a
+    dependency (see the FastAPI configuration guide).
 
 ## Applications
 
@@ -111,13 +113,22 @@ For more information, see [Zitadel user types](https://zitadel.com/docs/guides/m
     2. Download and secure the key file
     3. Update the key file path in `demo_project/service_user.py`
 
+!!! note "Service users and the token audience"
+
+    Service user tokens carry the service user's own `client_id`, not your
+    app's. The API accepts them when they request the
+    [reserved scope](https://zitadel.com/docs/apis/openidoauth/scopes#reserved-scopes)
+    `urn:zitadel:iam:org:project:id:{project_id}:aud`, which adds the
+    project ID to `aud`. See `demo_project/service_user.py` and Zitadel's
+    [Private Key JWT guide](https://zitadel.com/docs/guides/integrate/service-accounts/private-key-jwt).
+
 
 !!! success "Configuration complete"
 
-    By now, you should have recorded the following information:
+    You should now have:
 
-     - Project Id
-     - Issuer URL
-     - API application client Id
+     - Project Id (`project_id`)
+     - Issuer URL (`issuer_url`)
+     - User Agent application client Id (`app_client_id`)
 
-    Use these values in the FastAPI application configuration (see next steps).
+    Use these values in the FastAPI configuration (next page).

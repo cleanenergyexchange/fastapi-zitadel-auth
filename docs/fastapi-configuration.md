@@ -1,6 +1,6 @@
 # FastAPI setup
 
-This guide shows an example of setting up a FastAPI app with Zitadel authentication.
+Set up a FastAPI app with Zitadel authentication.
 
 
 ```python
@@ -31,31 +31,33 @@ zitadel_auth = ZitadelAuth(
 )
 ```
 
-!!! warning "Audience and client binding"
+!!! info "Which tokens does my API accept?"
 
-    A token is accepted only if both:
+    The API accepts every token issued for your Zitadel project: a token is
+    valid when its [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims)
+    contains your `project_id` or `app_client_id`.
 
-    1. its `aud` claim contains the configured `app_client_id`, and
-    2. its `client_id` claim equals the configured `app_client_id`.
+    - Apps in the project carry the project ID in `aud` by default.
+    - Service users add it by requesting the
+      [reserved scope](https://zitadel.com/docs/apis/openidoauth/scopes#reserved-scopes)
+      `urn:zitadel:iam:org:project:id:{project_id}:aud`.
 
-    By default, Zitadel includes every app in a project — plus the
-    project ID — in the access token's
-    [`aud` claim](https://zitadel.com/docs/apis/openidoauth/claims#standard-claims),
-    so audience matching alone accepts tokens issued for sibling apps in
-    the same project. The `client_id` claim is the only reliable per-app
-    discriminator. See Zitadel's
+    The project is the trust boundary. To keep two apps apart, put them in
+    separate projects — [roles are project-scoped](https://zitadel.com/docs/concepts/structure/projects).
+
+    To limit an endpoint to one client app, check the
+    [`client_id` claim](https://zitadel.com/docs/apis/openidoauth/claims)
+    in a dependency:
+
+    ```python
+    async def validate_client(user: DefaultZitadelUser = Depends(zitadel_auth)) -> None:
+        if user.claims.client_id != CLIENT_ID:
+            raise ForbiddenException("Token was not issued by an allowed client")
+    ```
+
+    See also Zitadel's
     [audience validation guidance](https://help.zitadel.com/security-best-practices-validating-audience-aud-claims-in-zitadel-access-tokens).
 
-!!! info "Clock skew (`token_leeway`)"
-
-    The optional `token_leeway` parameter (seconds) is applied to the
-    `exp` / `nbf` / `iat` checks. Default `0`; the library hard-caps it
-    at 30 seconds and raises `ValueError` for higher values.
-    [RFC 7519 §4.1.4/§4.1.5](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4)
-    permits "some small leeway, usually no more than a few minutes",
-    but a tighter cap preserves the value of `exp` for short-lived
-    OAuth2 access tokens. Synchronise host clocks via NTP rather than
-    widening this window.
 
 ```python
 
@@ -120,7 +122,7 @@ def protected_by_scope(request: Request):
 
 ## Customizing OpenAPI documentation
 
-You can optionally customize how the authentication scheme appears in Swagger UI:
+To change how the authentication scheme appears in Swagger UI:
 
 ```python
 zitadel_auth = ZitadelAuth(
@@ -130,10 +132,6 @@ zitadel_auth = ZitadelAuth(
 )
 ```
 
-!!! info "Optional parameters"
-
-    Both `scheme_name` and `description` are optional and have sensible defaults. Only customize them if you want to change how the authentication scheme appears in your API documentation.
-
 !!! note "CORS Middleware"
 
-    For production you may need to add a [CORS middleware](https://fastapi.tiangolo.com/tutorial/cors/) to your FastAPI app.
+    Production apps may need a [CORS middleware](https://fastapi.tiangolo.com/tutorial/cors/).
