@@ -1,13 +1,11 @@
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 from fastapi_zitadel_auth.exceptions import UnauthorizedException, ForbiddenException
 
-if TYPE_CHECKING:  # pragma: no cover
-    from jwt.types import Options
 
 log = logging.getLogger("fastapi_zitadel_auth")
 
@@ -65,7 +63,7 @@ class TokenValidator:
         token_leeway: float = 0,
     ) -> dict[str, Any]:
         """Verify token signature and claims with provided key"""
-        options: "Options" = {
+        options: jwt.types.Options = {
             "verify_signature": True,
             "verify_exp": True,
             "verify_nbf": True,
